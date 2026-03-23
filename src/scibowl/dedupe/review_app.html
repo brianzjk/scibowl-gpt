@@ -69,14 +69,17 @@
       gap: 10px;
       align-items: center;
     }
-    select, button, textarea {
+    select, input, button, textarea {
       font: inherit;
     }
-    select, button {
+    select, input, button {
       border-radius: 12px;
       border: 1px solid var(--line);
       background: #fff;
       padding: 10px 14px;
+    }
+    .threshold-input {
+      width: 96px;
     }
     button {
       cursor: pointer;
@@ -204,12 +207,16 @@
             <option value="all">All</option>
             <option value="reviewed">Reviewed</option>
           </select>
+          <label class="inline-label" for="similarity-threshold">Min similarity</label>
+          <input id="similarity-threshold" class="threshold-input" type="number" min="0" max="1" step="0.001" value="0.000">
+          <button id="apply-threshold" class="ghost">Apply</button>
           <button id="prev-button" class="secondary">Prev</button>
           <button id="next-button" class="secondary">Next</button>
         </div>
       </div>
       <div class="controls-row">
         <div class="controls">
+          <span class="pill">Min similarity <strong id="threshold-display">0.000</strong></span>
           <span class="pill">Similarity <strong id="embedding-score">0.0000</strong></span>
           <span class="pill">Lexical overlap <strong id="lexical-score">0.000</strong></span>
           <span class="pill">Same normalized answer <strong id="same-answer">false</strong></span>
@@ -253,6 +260,7 @@
   </div>
 
   <script>
+    let allSessionItems = [];
     let sessionItems = [];
     let currentIndex = 0;
     let currentPairId = null;
@@ -283,9 +291,16 @@
       element.classList.remove("hidden");
     }
 
-    function setSummary(summary) {
-      setText("reviewed-count", summary.reviewed);
-      setText("remaining-count", summary.remaining);
+    function getSimilarityThreshold() {
+      const value = Number.parseFloat(document.getElementById("similarity-threshold").value);
+      return Number.isFinite(value) ? Math.min(Math.max(value, 0), 1) : 0;
+    }
+
+    function setSummary() {
+      const reviewed = sessionItems.filter((item) => item.review_status === "reviewed").length;
+      setText("reviewed-count", reviewed);
+      setText("remaining-count", sessionItems.length - reviewed);
+      setText("threshold-display", getSimilarityThreshold().toFixed(3));
     }
 
     function currentItem() {
@@ -295,8 +310,15 @@
     async function loadSession() {
       const filter = document.getElementById("filter").value;
       const payload = await fetchJson(`/api/session?filter=${encodeURIComponent(filter)}`);
-      sessionItems = payload.items;
-      setSummary(payload.summary);
+      allSessionItems = payload.items;
+      await applySimilarityFilter();
+    }
+
+    async function applySimilarityFilter() {
+      const threshold = getSimilarityThreshold();
+      window.localStorage.setItem("duplicate-review:min-similarity", threshold.toFixed(3));
+      sessionItems = allSessionItems.filter((item) => item.embedding_similarity >= threshold);
+      setSummary();
       if (currentIndex >= sessionItems.length) {
         currentIndex = Math.max(sessionItems.length - 1, 0);
       }
@@ -374,16 +396,16 @@
           notes: document.getElementById("notes").value,
         }),
       });
-      const item = sessionItems.find((entry) => entry.pair_id === currentPairId);
+      const item = allSessionItems.find((entry) => entry.pair_id === currentPairId);
       if (item) {
         item.label = label;
         item.review_status = label ? "reviewed" : "candidate";
       }
-      setSummary(payload.summary);
-      if (document.getElementById("filter").value === "unreviewed" && label) {
+      if (document.getElementById("filter").value !== "all") {
         await loadSession();
         return;
       }
+      setSummary();
       renderCandidate(payload.candidate);
     }
 
@@ -396,6 +418,14 @@
     document.getElementById("filter").addEventListener("change", () => {
       currentIndex = 0;
       loadSession();
+    });
+    document.getElementById("apply-threshold").addEventListener("click", () => {
+      currentIndex = 0;
+      applySimilarityFilter();
+    });
+    document.getElementById("similarity-threshold").addEventListener("change", () => {
+      currentIndex = 0;
+      applySimilarityFilter();
     });
     document.getElementById("prev-button").addEventListener("click", () => move(-1));
     document.getElementById("next-button").addEventListener("click", () => move(1));
@@ -414,6 +444,10 @@
       if (event.key.toLowerCase() === "k") move(-1);
     });
 
+    const savedThreshold = window.localStorage.getItem("duplicate-review:min-similarity");
+    if (savedThreshold) {
+      document.getElementById("similarity-threshold").value = savedThreshold;
+    }
     loadSession();
   </script>
 </body>

@@ -99,6 +99,8 @@ For each pair, the website shows:
 - answer line
 - embedding similarity and lexical overlap
 
+The website also lets you filter the loaded candidate set by a minimum embedding similarity value in the browser, so you do not need to keep separate `0.95`-only duplicate files around.
+
 ## How Reviews Are Saved
 
 The review website writes a reviewed JSONL file at the `--output-path` you provide.
