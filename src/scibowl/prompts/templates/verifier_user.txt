@@ -1,0 +1,36 @@
+Review this generated Science Bowl question and return valid JSON with this exact shape:
+{
+  "summary": "string",
+  "factual_issues": ["string"],
+  "answerability_issues": ["string"],
+  "style_issues": ["string"],
+  "difficulty_issues": ["string"],
+  "required_revisions": ["string"],
+  "difficulty_estimate": 1,
+  "style_score": 0.0
+}
+
+Requested Spec:
+- Category: {category}
+- Subcategory: {subcategory}
+- Type: {question_type}
+- Answer Mode: {answer_mode}
+- Difficulty: {difficulty}
+
+Draft Question:
+{question_text}
+
+Draft Answer:
+{answer_text}
+
+Cited Fact Chunks:
+{citations}
+
+Retrieved Fact Support:
+{facts}
+
+Instructions:
+- Report only issues that materially affect factuality, answerability, style, or difficulty alignment.
+- Set style_score from 0.0 to 1.0.
+- Set difficulty_estimate from 1 to 7.
+- Prefer concise issue strings over long explanations.

@@ -1,0 +1,9 @@
+writer:
+  provider: local
+  model_name: heuristic-writer-v1
+  base_url: null
+
+verifier:
+  provider: local
+  model_name: rule-verifier-v1
+  base_url: null

@@ -1,0 +1,21 @@
+Write one Science Bowl question with these constraints.
+
+Category: {category}
+Subcategory: {subcategory}
+Type: {question_type}
+Answer Mode: {answer_mode}
+Difficulty: {difficulty}
+Topic Focus: {topic_focus}
+
+Grounding Facts:
+{facts}
+
+Style Examples:
+{styles}
+
+Requirements:
+- Return exactly one question.
+- Keep the answer unambiguous.
+- If answer mode is multiple_choice, include exactly four choices labeled W, X, Y, Z.
+- If answer mode is short_answer, return an empty choices array.
+- The answer_text must begin with "ANSWER:".
