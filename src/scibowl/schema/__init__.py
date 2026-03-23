@@ -1,5 +1,6 @@
 from .common import AnswerMode, Category, Citation, ModelInfo, QuestionType, SourceType, Verdict
 from .dataset import EvaluationRecord, TrainingExample
+from .duplicate import DuplicateCandidate, DuplicateLabel, DuplicateMiningSummary, DuplicateReviewStatus
 from .manifest import DatasetArtifact, DatasetManifest
 from .generation import (
     DraftQuestion,
@@ -25,6 +26,10 @@ __all__ = [
     "DraftQuestion",
     "DatasetArtifact",
     "DatasetManifest",
+    "DuplicateCandidate",
+    "DuplicateLabel",
+    "DuplicateMiningSummary",
+    "DuplicateReviewStatus",
     "EvaluationRecord",
     "GeneratedDraft",
     "HumanReview",

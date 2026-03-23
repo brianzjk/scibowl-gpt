@@ -17,6 +17,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
+embeddings = ["sentence-transformers>=5.3"]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
