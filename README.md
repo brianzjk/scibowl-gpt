@@ -1,38 +1,30 @@
 # scibowl-gpt
-Finetuning an open weights model for automatically generating Science Bowl questions. 
 
-## Future Todo:
-- Improve packet parser
-- Make model to put questions into subcategories 
-- Create reward model on question quality for RLHF
+Science Bowl question-generation workspace with four main concerns:
 
-## Example prompt
-**Input:**
+- ingest textbooks, packet PDFs, and MIT writing data into normalized artifacts
+- retrieve factual textbook chunks and style examples
+- generate and verify draft questions through stable schemas
+- evaluate prompting and future fine-tuning runs against held-out rated data
+
+The current implementation is structured as a modular Python package under `src/scibowl` with typed schemas, CLI entrypoints, packet normalization/parsing tools, and baseline evaluation plumbing.
+
+Key directories:
+
+- `configs/` for runtime settings
+- `src/scibowl/ingest/` for dataset, textbook, review, and packet ingestion
+- `src/scibowl/generate/` and `src/scibowl/verify/` for draft production and review
+- `src/scibowl/eval/` for splits and baseline evaluation
+- `data/processed/` and `data/interim/` for normalized artifacts
+
+Install locally with:
+
+```powershell
+pip install -e .[dev]
 ```
-Category: Math, Type: Tossup, Subcategory: Combinatorics, Difficulty: 3
+
+Run the CLI with:
+
+```powershell
+python -m scibowl.cli.main --help
 ```
-
-**Output:**
-```
-Tim flips a fair coin 10 times. Given that the first 3 flips all landed on the same side, what is the expected number of total heads flipped?
-
-ANSWER: 5
-```
-
-### Subcategories:
-**Math:** Algebra, Geometry, Combinatorics, Number Theory, Calculus, Other
-**Physics:** Kinematics, E+M, Thermodynamics, Optics, Quantum, Particle, Waves, Relativity
-**Earth and Space:** Hydrology, Tectonics/Volcanism, Meteorology, Rocks & Minerals, Cosmology, Solar System, Stars, Observational Astronomy
-**Biology:** Biochemistry, Cell/Molecular Biology, Genetics/Evolution, Plants, Animals, Ecology, Biosystematics, Physiology
-**Chemistry:** [insert good list here]
-**Energy:** Physics, Earth, Space, Biology, Chemistry, Machine Learning, Stats, Theoretical CS
-
-### Difficulty:
-- 0: regionals RR
-- 1: regionals RR
-- 2: Nats RR, Regionals early DE
-- 3: Nats RR, Regionals mid DE
-- 4: Nats Early DE, Regionals late DE
-- 5: Nats mid DE
-- 6: Nats late DE
-- 7: Too hard for Science Bowl

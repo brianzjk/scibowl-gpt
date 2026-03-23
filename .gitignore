@@ -2,3 +2,10 @@
 /.venv
 /.conda
 /models
+/tests_runtime
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/

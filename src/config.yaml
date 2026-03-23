@@ -1,2 +1,0 @@
-process_packets:
-  ignore: ["David Rounds", "CCWT", "Summer"]
