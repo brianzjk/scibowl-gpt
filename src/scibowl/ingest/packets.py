@@ -19,6 +19,7 @@ ENTRY_PATTERN = re.compile(
     r"""
     (?is)
     (?P<type>visual\s+bonus|bonus|toss(?:[\s-]*up)?)
+    (?:\s*-\s*[A-Za-z][A-Za-z .'/&()-]{0,40})?
     \s*
     (?P<number>\d+)[\.\)]
     \s*
@@ -48,7 +49,9 @@ ENTRY_PATTERN = re.compile(
             visual\s+bonus|
             bonus|
             toss(?:[\s-]*up)?
-        )\s*\d+[\.\)]
+        )
+        (?:\s*-\s*[A-Za-z][A-Za-z .'/&()-]{0,40})?
+        \s*\d+[\.\)]
         |
         \Z
     )

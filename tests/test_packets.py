@@ -160,3 +160,22 @@ ANSWER: 120
     assert len(rows) == 1
     assert rows[0].answer_mode.value == "short_answer"
     assert rows[0].choices == []
+
+
+def test_parse_packet_text_handles_writer_name_between_type_and_number() -> None:
+    text = """
+Bonus
+18) Earth and Space - Short Answer: Although Venus has a very low orbital tilt, it shows periodic variations in atmospheric absorption due to variations in its energy budget. To the nearest year, what is the measured period of these atmospheric oscillations?
+ANSWER: 11 years
+
+Tossup - Colin
+19) Chemistry - Short Answer: What quantity, defined as half the product of the concentration and the square of the charge of an ion, is commonly used to define activity coefficients for strong electrolytes in solution?
+ANSWER: Ionic strength
+"""
+
+    rows = parse_packet_text(text, source_id="packet_test")
+
+    assert len(rows) == 2
+    assert rows[0].answer_text == "ANSWER: 11 years"
+    assert rows[1].question_text.startswith("What quantity, defined as half the product")
+    assert rows[1].answer_text == "ANSWER: Ionic strength"
