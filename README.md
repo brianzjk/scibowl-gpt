@@ -12,10 +12,16 @@ The current implementation is structured as a modular Python package under `src/
 Key directories:
 
 - `configs/` for runtime settings
+- `src/scibowl/dedupe/` for duplicate mining, CSV export, and local review
 - `src/scibowl/ingest/` for dataset, textbook, review, and packet ingestion
 - `src/scibowl/generate/` and `src/scibowl/verify/` for draft production and review
 - `src/scibowl/eval/` for splits and baseline evaluation
 - `data/processed/` and `data/interim/` for normalized artifacts
+
+Docs:
+
+- `docs/architecture.md` for the high-level pipeline
+- `docs/duplicate_review.md` for duplicate mining and the local review website
 
 Install locally with:
 
