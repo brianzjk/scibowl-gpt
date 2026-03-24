@@ -31,6 +31,7 @@ Retrieved Fact Support:
 
 Instructions:
 - Report only issues that materially affect factuality, answerability, style, or difficulty alignment.
+- Treat bait clues as answerability or style issues when the question strongly suggests one answer before pivoting to another.
 - Set style_score from 0.0 to 1.0.
 - Set difficulty_estimate from 1 to 7.
 - Prefer concise issue strings over long explanations.

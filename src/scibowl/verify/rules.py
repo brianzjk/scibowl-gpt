@@ -4,6 +4,7 @@ from scibowl.schema.common import Verdict
 from scibowl.schema.generation import GeneratedDraft, QuestionSpec, RetrievalBundle
 from scibowl.schema.question import NormalizedQuestion
 from scibowl.schema.verification import VerificationCheck, VerificationChecks, VerificationIssue
+from scibowl.verify.bait import build_bait_check
 
 
 def _format_check(draft: GeneratedDraft) -> VerificationCheck:
@@ -88,6 +89,7 @@ def build_checks(
         difficulty_alignment=_difficulty_check(spec, draft),
         style_alignment=_style_check(spec, style_questions),
         novelty=_novelty_check(draft, style_questions),
+        bait_detection=build_bait_check(draft, bundle, style_questions),
     )
 
 
@@ -99,6 +101,7 @@ def derive_verdict(checks: VerificationChecks) -> Verdict:
             checks.factual_grounding,
             checks.answerability,
             checks.difficulty_alignment,
+            checks.bait_detection,
         ]
     ):
         return Verdict.PASS

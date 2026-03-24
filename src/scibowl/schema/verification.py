@@ -20,6 +20,8 @@ class VerificationCheck(BaseModel):
     estimated_difficulty: int | None = None
     style_score: float | None = None
     similarity_score: float | None = None
+    bait_score: float | None = None
+    sampled_prefixes: list[dict[str, object]] = Field(default_factory=list)
 
 
 class VerificationChecks(BaseModel):
@@ -29,6 +31,7 @@ class VerificationChecks(BaseModel):
     difficulty_alignment: VerificationCheck
     style_alignment: VerificationCheck
     novelty: VerificationCheck
+    bait_detection: VerificationCheck
 
 
 class ReviewMetadata(BaseModel):

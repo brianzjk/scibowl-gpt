@@ -50,6 +50,7 @@ class VerifierService:
             checks.difficulty_alignment,
             checks.style_alignment,
             checks.novelty,
+            checks.bait_detection,
         ]:
             required_revisions.extend(issue.message for issue in check.issues)
         required_revisions.extend(item for item in llm_required_revisions if item not in required_revisions)
