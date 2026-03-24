@@ -3,16 +3,19 @@ Review this generated Science Bowl question and return valid JSON with this exac
   "summary": "string",
   "format_issues": ["string"],
   "topic_issues": ["string"],
+  "style_issues": ["string"],
   "scientific_accuracy_issues": ["string"],
   "required_revisions": ["string"],
   "solver_answer": "string",
   "solver_answer_matches_expected": true,
+  "topic_score": 0.0,
   "style_score": 0.0
 }}
 
 Requested Spec:
 - Category: {category}
 - Subcategory: {subcategory}
+- Subcategory Guidance: {subcategory_guidance}
 - Topic Focus: {topic_focus}
 - Type: {question_type}
 - Answer Mode: {answer_mode}
@@ -36,7 +39,11 @@ Instructions:
 - First answer the question yourself as a competitor would.
 - Compare your solved answer to the provided answer_text.
 - If your solved answer does not match the provided answer, report that under scientific_accuracy_issues.
-- Report only issues that materially affect formatting, grammar, topical fit, or scientific correctness.
+- Report only issues that materially affect formatting, grammar, topical fit, style, or scientific correctness.
+- For style, focus on whether the question is a reaction-speed test, includes unnecessary flavor text, or violates crisp Science Bowl wording.
+- For short-answer questions, flag answer lines that are full sentences or explanatory clauses instead of concise answers.
+- For multiple-choice questions, heavily penalize stems that do not contain the exact phrase "Which of the following".
+- Set topic_score from 0.0 to 1.0.
 - Set style_score from 0.0 to 1.0.
 - Prefer concise issue strings over long explanations.
 - Do not evaluate difficulty.

@@ -208,7 +208,8 @@
           <div class="score-grid">
             <div class="score-card"><div class="label">Overall</div><div class="value" id="score-overall">0.000</div></div>
             <div class="score-card"><div class="label">Format / Grammar</div><div class="value" id="score-format">0.000</div></div>
-            <div class="score-card"><div class="label">Topic / Style</div><div class="value" id="score-style">0.000</div></div>
+            <div class="score-card"><div class="label">On Topic</div><div class="value" id="score-topic">0.000</div></div>
+            <div class="score-card"><div class="label">Style</div><div class="value" id="score-style">0.000</div></div>
             <div class="score-card"><div class="label">Factuality</div><div class="value" id="score-factuality">0.000</div></div>
           </div>
         </section>
@@ -255,7 +256,11 @@
               <select id="verifier-factuality-select"></select>
             </div>
             <div>
-              <label for="verifier-style-select">Verifier Topic / Style</label>
+              <label for="verifier-topic-select">Verifier On Topic</label>
+              <select id="verifier-topic-select"></select>
+            </div>
+            <div>
+              <label for="verifier-style-select">Verifier Style</label>
               <select id="verifier-style-select"></select>
             </div>
             <div>
@@ -330,6 +335,7 @@
       setText("verifier-summary", "");
       setText("score-overall", "0.000");
       setText("score-format", "0.000");
+      setText("score-topic", "0.000");
       setText("score-style", "0.000");
       setText("score-factuality", "0.000");
       document.getElementById("difficulty-select").value = "";
@@ -337,6 +343,7 @@
       document.getElementById("comment-box").value = "";
       document.getElementById("verifier-format-select").value = "";
       document.getElementById("verifier-factuality-select").value = "";
+      document.getElementById("verifier-topic-select").value = "";
       document.getElementById("verifier-style-select").value = "";
       document.getElementById("verifier-overall-select").value = "";
       document.getElementById("verifier-comment-box").value = "";
@@ -393,6 +400,7 @@
       setText("verifier-summary", payload.report.summary || "");
       setText("score-overall", Number(scores.overall ?? 0).toFixed(3));
       setText("score-format", Number(scores.format_compliance ?? 0).toFixed(3));
+      setText("score-topic", Number(scores.topic_alignment ?? 0).toFixed(3));
       setText("score-style", Number(scores.style_alignment ?? 0).toFixed(3));
       setText("score-factuality", Number(scores.factuality ?? 0).toFixed(3));
       renderChoices("generated-choices", question.choices || []);
@@ -402,6 +410,7 @@
       document.getElementById("comment-box").value = review?.comment ?? "";
       document.getElementById("verifier-format-select").value = toSelectValue(humanVerifierScores.format_compliance);
       document.getElementById("verifier-factuality-select").value = toSelectValue(humanVerifierScores.factuality);
+      document.getElementById("verifier-topic-select").value = toSelectValue(humanVerifierScores.topic_alignment);
       document.getElementById("verifier-style-select").value = toSelectValue(humanVerifierScores.style_alignment);
       document.getElementById("verifier-overall-select").value = toSelectValue(humanVerifierScores.overall);
       document.getElementById("verifier-comment-box").value = metadata.verifier_comment ?? "";
@@ -418,6 +427,7 @@
         verifier_scores: clearReview ? {} : {
           format_compliance: parseScoreSelect("verifier-format-select"),
           factuality: parseScoreSelect("verifier-factuality-select"),
+          topic_alignment: parseScoreSelect("verifier-topic-select"),
           style_alignment: parseScoreSelect("verifier-style-select"),
           overall: parseScoreSelect("verifier-overall-select"),
         },
@@ -500,6 +510,7 @@
     [
       "verifier-format-select",
       "verifier-factuality-select",
+      "verifier-topic-select",
       "verifier-style-select",
       "verifier-overall-select",
     ].forEach(buildScoreOptions);

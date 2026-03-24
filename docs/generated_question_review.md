@@ -10,8 +10,6 @@ The baseline evaluation now writes two files:
   - generated draft
   - verifier report
   - evaluation scores
-  - reference question from the held-out corpus
-  - reference human rating aggregates
 
 For the current Ollama baseline, the main review corpus is:
 
@@ -48,7 +46,7 @@ For each generated question, the website shows:
 - the generated question, answer, and multiple-choice choices if present
 - the requested spec: category, subcategory, type, answer mode, difficulty, topic focus
 - the writer and verifier model names
-- verifier summary plus the current verifier rubric scores: format/grammar, topic/style, factuality, and overall
+- verifier summary plus the current verifier rubric scores: format/grammar, on-topic, style, factuality, and overall
 - blankable human override scores for those same verifier metrics
 
 ## What You Can Save

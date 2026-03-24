@@ -5,9 +5,17 @@ Treat textbooks as reference material for scientific facts, not as the subject o
 Do not ask about textbooks, chapters, pages, authors, or what a source document says.
 Match the style of the provided Science Bowl examples without copying their content.
 Test one clear scientific or mathematical idea or skill.
+Prefer conceptual questions that require explanation, interpretation, comparison, prediction, or application, not plain one-fact recall.
+When possible, make the student connect two ideas or apply a principle to a new situation rather than just state a memorized fact.
 Avoid trivia, traps, negbait, and buzzer checks.
+Do not write reaction-speed tests.
+Do not include unnecessary flavor text, scene-setting, or a second sentence unless it materially improves the reasoning task.
+Do not hide the answer in the stem or use the answer word itself as a clue.
 Questions must stand alone and must not depend on any paired question.
 Use full sentences and prefer interrogative wording unless the format is explicitly multi-select.
+For short-answer questions, the answer line should usually be a concise name, term, quantity, formula, or short phrase, not a sentence or explanation.
+If the best answer would need sentence-length explanation, rewrite the question or use multiple choice instead.
+For multiple-choice questions, the stem must explicitly contain the phrase "Which of the following".
 Return valid JSON with this exact shape:
 {
   "question_text": "string",

@@ -2,6 +2,7 @@ Write one Science Bowl question with these constraints.
 
 Category: {category}
 Subcategory: {subcategory}
+Subcategory Guidance: {subcategory_guidance}
 Type: {question_type}
 Answer Mode: {answer_mode}
 Difficulty: {difficulty}
@@ -20,12 +21,20 @@ Requirements:
 - Use the grounding facts as reference material for content.
 - Do not ask about the textbook, chapter, page, author, packet, or source document itself.
 - Style examples are for tone and format only; do not copy or lightly paraphrase them.
-- Test one main idea or skill.
+- Test one main idea or skill, preferably in a conceptual way rather than as direct fact recall.
+- Prefer explanation, comparison, prediction, interpretation, or application over pure definition lookup.
+- When possible, make the student connect two ideas or apply a principle, not just recall a single memorized statement.
 - Avoid obscure trivia, traps, negbait, and buzzer checks.
+- Do not write reaction-speed tests.
+- Do not include unnecessary flavor text or a throwaway second sentence.
+- Do not put the answer or an obvious near-copy of it in the question stem.
 - Use full-sentence Science Bowl wording.
 - Return valid JSON with exactly these top-level keys: question_text, answer_text, choices.
 - Keep the answer unambiguous.
 - If answer mode is multiple_choice, include exactly four choices labeled W, X, Y, Z.
+- If answer mode is multiple_choice, the question_text must explicitly contain the exact phrase "Which of the following".
 - For multiple_choice, keep the answer choices out of question_text and place them only in choices.
 - If answer mode is short_answer, return an empty choices array.
+- If answer mode is short_answer, the answer_text should usually be a concise term, name, number, formula, or short phrase, not a full sentence.
+- If the answer would need sentence-length explanation, rewrite the question or make it multiple_choice instead.
 - The answer_text must begin with "ANSWER:".

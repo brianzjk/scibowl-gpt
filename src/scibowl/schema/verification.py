@@ -27,6 +27,7 @@ class VerificationChecks(BaseModel):
     factual_grounding: VerificationCheck
     answerability: VerificationCheck
     difficulty_alignment: VerificationCheck
+    topic_alignment: VerificationCheck
     style_alignment: VerificationCheck
     novelty: VerificationCheck
 

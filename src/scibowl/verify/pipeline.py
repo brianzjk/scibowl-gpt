@@ -51,6 +51,7 @@ class VerifierService:
             checks.format_compliance,
             checks.factual_grounding,
             checks.answerability,
+            checks.topic_alignment,
             checks.style_alignment,
         ]:
             required_revisions.extend(issue.message for issue in check.issues)
@@ -74,7 +75,9 @@ class VerifierService:
         for message in _as_issue_messages(review.get("format_issues")):
             checks.format_compliance.issues.append(VerificationIssue(code="llm_format_issue", message=message))
         for message in _as_issue_messages(review.get("topic_issues")):
-            checks.style_alignment.issues.append(VerificationIssue(code="llm_topic_issue", message=message))
+            checks.topic_alignment.issues.append(VerificationIssue(code="llm_topic_issue", message=message))
+        for message in _as_issue_messages(review.get("style_issues")):
+            checks.style_alignment.issues.append(VerificationIssue(code="llm_style_issue", message=message))
         for message in _as_issue_messages(review.get("scientific_accuracy_issues")):
             checks.factual_grounding.issues.append(
                 VerificationIssue(code="llm_scientific_accuracy_issue", message=message)
@@ -95,7 +98,12 @@ class VerifierService:
         checks.format_compliance.passed = not checks.format_compliance.issues
         checks.factual_grounding.passed = not checks.factual_grounding.issues
         checks.answerability.passed = not checks.answerability.issues
+        checks.topic_alignment.passed = not checks.topic_alignment.issues
         checks.style_alignment.passed = not checks.style_alignment.issues
+
+        topic_score = review.get("topic_score")
+        if isinstance(topic_score, (int, float)):
+            checks.topic_alignment.style_score = float(topic_score)
 
         style_score = review.get("style_score")
         if isinstance(style_score, (int, float)):

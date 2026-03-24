@@ -217,6 +217,7 @@ def _normalize_verifier_scores(payload: dict[str, float | None] | None) -> dict[
     keys = [
         "format_compliance",
         "factuality",
+        "topic_alignment",
         "style_alignment",
         "overall",
     ]
@@ -237,11 +238,13 @@ def _normalize_verifier_scores(payload: dict[str, float | None] | None) -> dict[
 def _build_display_scores(report: VerifierReport) -> dict[str, float]:
     format_score = 1.0 if report.checks.format_compliance.passed else 0.0
     factuality = 1.0 if report.checks.factual_grounding.passed else 0.0
+    topic_alignment = round(report.checks.topic_alignment.style_score or 0.0, 3)
     style_alignment = round(report.checks.style_alignment.style_score or 0.0, 3)
-    overall = round((format_score + factuality + style_alignment) / 3, 3)
+    overall = round((format_score + factuality + topic_alignment + style_alignment) / 4, 3)
     return {
         "format_compliance": format_score,
         "factuality": factuality,
+        "topic_alignment": topic_alignment,
         "style_alignment": style_alignment,
         "overall": overall,
     }

@@ -33,15 +33,17 @@ def test_generated_question_review_store_round_trip() -> None:
         difficulty=5,
         quality=1.0,
         comment="Usable with edits.",
-        verifier_scores={"format_compliance": 0.7, "style_alignment": 0.8, "factuality": 1.0},
+        verifier_scores={"format_compliance": 0.7, "factuality": 1.0, "topic_alignment": 0.9, "style_alignment": 0.8},
         verifier_comment="This should not have been rejected.",
     )
     assert updated["review"]["ratings"]["difficulty"] == 5
     assert updated["review"]["metadata"]["human_verifier_scores"]["format_compliance"] == 0.7
     assert updated["review"]["metadata"]["human_verifier_scores"]["style_alignment"] == 0.8
     assert updated["review"]["metadata"]["human_verifier_scores"]["factuality"] == 1.0
+    assert updated["review"]["metadata"]["human_verifier_scores"]["topic_alignment"] == 0.9
     assert updated["display_scores"]["format_compliance"] == 1.0
     assert updated["display_scores"]["factuality"] == 1.0
+    assert updated["display_scores"]["topic_alignment"] == 0.6
     assert updated["display_scores"]["style_alignment"] == 0.7
 
     saved_reviews = read_jsonl(reviews_path, HumanReview)
@@ -49,6 +51,7 @@ def test_generated_question_review_store_round_trip() -> None:
     assert saved_reviews[0].question_id == "draft_1"
     assert saved_reviews[0].ratings.quality == 1.0
     assert saved_reviews[0].metadata["human_verifier_scores"]["format_compliance"] == 0.7
+    assert saved_reviews[0].metadata["human_verifier_scores"]["topic_alignment"] == 0.9
     assert saved_reviews[0].metadata["human_verifier_scores"]["style_alignment"] == 0.8
 
     cleared = store.save_review(
@@ -215,6 +218,7 @@ def _build_run_record(draft_id: str, *, candidate_question_id: str = "q_ref") ->
             factual_grounding=VerificationCheck(passed=True),
             answerability=VerificationCheck(passed=True),
             difficulty_alignment=VerificationCheck(passed=True, estimated_difficulty=4),
+            topic_alignment=VerificationCheck(passed=True, style_score=0.6),
             style_alignment=VerificationCheck(passed=True, style_score=0.7),
             novelty=VerificationCheck(passed=True, similarity_score=0.2),
         ),
