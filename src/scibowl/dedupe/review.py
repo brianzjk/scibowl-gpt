@@ -45,13 +45,15 @@ class DuplicateReviewStore:
             "counts_by_label": counts_by_label,
         }
 
-    def session_items(self, *, filter_name: str = "unreviewed") -> list[dict[str, object]]:
+    def session_items(self, *, filter_name: str = "unreviewed", min_similarity: float = 0.0) -> list[dict[str, object]]:
         items: list[dict[str, object]] = []
         for pair_id in self._pair_order:
             candidate = self._candidates[pair_id]
             if filter_name == "unreviewed" and candidate.review_status == DuplicateReviewStatus.REVIEWED:
                 continue
             if filter_name == "reviewed" and candidate.review_status != DuplicateReviewStatus.REVIEWED:
+                continue
+            if candidate.embedding_similarity < min_similarity:
                 continue
             items.append(
                 {
@@ -96,7 +98,10 @@ class DuplicateReviewStore:
         tmp_path = self.output_path.with_suffix(self.output_path.suffix + ".tmp")
         with tmp_path.open("w", encoding="utf-8") as handle:
             for pair_id in self._pair_order:
-                handle.write(self._candidates[pair_id].model_dump_json() + "\n")
+                candidate = self._candidates[pair_id]
+                if candidate.review_status != DuplicateReviewStatus.REVIEWED:
+                    continue
+                handle.write(candidate.model_dump_json() + "\n")
         tmp_path.replace(self.output_path)
 
 

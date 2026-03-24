@@ -22,6 +22,9 @@ Docs:
 
 - `docs/architecture.md` for the high-level pipeline
 - `docs/duplicate_review.md` for duplicate mining and the local review website
+- `docs/generation_config.md` for config-driven question generation
+- `docs/generated_question_review.md` for reviewing generated baseline questions locally
+- `docs/repo_split_plan.md` for a future plan to split similarity and ingestion into separate repos
 
 Install locally with:
 

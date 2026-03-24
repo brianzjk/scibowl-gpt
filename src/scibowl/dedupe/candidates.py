@@ -63,7 +63,7 @@ def mine_duplicate_candidates(
     questions: list[NormalizedQuestion],
     *,
     model_name: str = "mixedbread-ai/mxbai-embed-large-v1",
-    threshold: float = 0.82,
+    threshold: float = 0.5,
     top_k: int = 10,
     include_answer: bool = True,
     batch_size: int = 32,
@@ -108,7 +108,7 @@ def build_duplicate_candidates(
     questions: list[NormalizedQuestion],
     embeddings: np.ndarray,
     *,
-    threshold: float = 0.82,
+    threshold: float = 0.5,
     top_k: int = 10,
 ) -> list[DuplicateCandidate]:
     if len(questions) != len(embeddings):

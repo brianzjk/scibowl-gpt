@@ -208,7 +208,7 @@
             <option value="reviewed">Reviewed</option>
           </select>
           <label class="inline-label" for="similarity-threshold">Min similarity</label>
-          <input id="similarity-threshold" class="threshold-input" type="number" min="0" max="1" step="0.001" value="0.000">
+          <input id="similarity-threshold" class="threshold-input" type="number" min="0" max="1" step="0.001" value="0.900">
           <button id="apply-threshold" class="ghost">Apply</button>
           <button id="prev-button" class="secondary">Prev</button>
           <button id="next-button" class="secondary">Next</button>
@@ -216,7 +216,7 @@
       </div>
       <div class="controls-row">
         <div class="controls">
-          <span class="pill">Min similarity <strong id="threshold-display">0.000</strong></span>
+          <span class="pill">Min similarity <strong id="threshold-display">0.900</strong></span>
           <span class="pill">Similarity <strong id="embedding-score">0.0000</strong></span>
           <span class="pill">Lexical overlap <strong id="lexical-score">0.000</strong></span>
           <span class="pill">Same normalized answer <strong id="same-answer">false</strong></span>
@@ -260,7 +260,6 @@
   </div>
 
   <script>
-    let allSessionItems = [];
     let sessionItems = [];
     let currentIndex = 0;
     let currentPairId = null;
@@ -309,15 +308,12 @@
 
     async function loadSession() {
       const filter = document.getElementById("filter").value;
-      const payload = await fetchJson(`/api/session?filter=${encodeURIComponent(filter)}`);
-      allSessionItems = payload.items;
-      await applySimilarityFilter();
-    }
-
-    async function applySimilarityFilter() {
       const threshold = getSimilarityThreshold();
       window.localStorage.setItem("duplicate-review:min-similarity", threshold.toFixed(3));
-      sessionItems = allSessionItems.filter((item) => item.embedding_similarity >= threshold);
+      const payload = await fetchJson(
+        `/api/session?filter=${encodeURIComponent(filter)}&min_similarity=${encodeURIComponent(threshold.toFixed(3))}`
+      );
+      sessionItems = payload.items;
       setSummary();
       if (currentIndex >= sessionItems.length) {
         currentIndex = Math.max(sessionItems.length - 1, 0);
@@ -396,7 +392,7 @@
           notes: document.getElementById("notes").value,
         }),
       });
-      const item = allSessionItems.find((entry) => entry.pair_id === currentPairId);
+      const item = sessionItems.find((entry) => entry.pair_id === currentPairId);
       if (item) {
         item.label = label;
         item.review_status = label ? "reviewed" : "candidate";
@@ -421,11 +417,11 @@
     });
     document.getElementById("apply-threshold").addEventListener("click", () => {
       currentIndex = 0;
-      applySimilarityFilter();
+      loadSession();
     });
     document.getElementById("similarity-threshold").addEventListener("change", () => {
       currentIndex = 0;
-      applySimilarityFilter();
+      loadSession();
     });
     document.getElementById("prev-button").addEventListener("click", () => move(-1));
     document.getElementById("next-button").addEventListener("click", () => move(1));

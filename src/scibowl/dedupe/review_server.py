@@ -33,7 +33,13 @@ def run_duplicate_review_server(
             if parsed.path == "/api/session":
                 query = parse_qs(parsed.query)
                 filter_name = query.get("filter", ["unreviewed"])[0]
-                self._respond_json({"items": store.session_items(filter_name=filter_name), "summary": store.summary()})
+                min_similarity = float(query.get("min_similarity", ["0"])[0] or "0")
+                self._respond_json(
+                    {
+                        "items": store.session_items(filter_name=filter_name, min_similarity=min_similarity),
+                        "summary": store.summary(),
+                    }
+                )
                 return
             if parsed.path.startswith("/api/candidate/"):
                 pair_id = parsed.path.removeprefix("/api/candidate/")

@@ -32,6 +32,8 @@ These are stored directly in the reviewed duplicate JSONL output.
 - computes top semantic neighbors within each category
 - writes candidate pairs above the similarity threshold
 
+The default mining threshold is intentionally lower now (`0.5`) so the review website can later narrow the active queue in the browser without requiring a separate re-export for every threshold experiment.
+
 Each pair includes:
 
 - embedding similarity
@@ -51,7 +53,7 @@ Example:
   --summary-path data/interim/duplicates/style_corpus_all_candidates_summary.json `
   --device cuda `
   --top-k 10 `
-  --threshold 0.82
+  --threshold 0.5
 ```
 
 ## Export Reviewer CSV
@@ -99,7 +101,7 @@ For each pair, the website shows:
 - answer line
 - embedding similarity and lexical overlap
 
-The website also lets you filter the loaded candidate set by a minimum embedding similarity value in the browser, so you do not need to keep separate `0.95`-only duplicate files around.
+The website lets you filter the candidate queue by a minimum embedding similarity value in the browser, and that filtering is applied server-side when loading the review session. That means you can keep one broad candidate file and avoid loading the entire low-threshold set into the page at once. The page starts with a higher default minimum similarity for responsiveness, and you can lower it when you want broader review.
 
 ## How Reviews Are Saved
 
@@ -111,7 +113,7 @@ It preserves the original candidate order and updates:
 - `review_status`
 - `notes`
 
-That means you can stop and restart the review session without losing progress.
+The review output only stores reviewed rows, not a full copy of the candidate set. That means you can stop and restart the review session without losing progress, even when the candidate file is large.
 
 ## Keyboard Shortcuts
 
