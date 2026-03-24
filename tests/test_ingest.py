@@ -1,6 +1,7 @@
 import shutil
 from pathlib import Path
 
+from scibowl.ingest.textbooks import _trim_pages_after_contents
 from scibowl.ingest.question_sets import normalize_mit_question_csv
 from scibowl.ingest.reviews import import_ratings_csv
 from scibowl.utils.ids import make_id
@@ -93,3 +94,18 @@ def test_normalize_mit_csv_skips_visual_bonus() -> None:
     assert len(rows) == 1
     assert "visual" not in rows[0].question_text.lower()
     shutil.rmtree(tmp_path)
+
+
+def test_trim_pages_after_contents_skips_front_matter() -> None:
+    pages = [
+        "Preface\nThis book comes with a companion website.",
+        "Contents\nChapter 1 .... 1\nChapter 2 .... 35\nAppendix .... 700",
+        "Chapter 1\nMatter consists of atoms and molecules.",
+        "Chapter 1 continued\nEnergy is conserved in closed systems.",
+    ]
+
+    trimmed_pages, metadata = _trim_pages_after_contents(pages)
+
+    assert trimmed_pages[0].startswith("Chapter 1")
+    assert metadata["front_matter_trimmed"] is True
+    assert metadata["content_start_page"] == 3

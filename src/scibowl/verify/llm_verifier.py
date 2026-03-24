@@ -27,6 +27,7 @@ def build_verifier_model() -> PromptVerifierModel | None:
         model_env="SCIBOWL_VERIFIER_MODEL",
         base_url_env="SCIBOWL_VERIFIER_BASE_URL",
         api_key_env="SCIBOWL_VERIFIER_API_KEY",
+        timeout_env="SCIBOWL_VERIFIER_TIMEOUT_SECONDS",
     )
     if client is None:
         return None

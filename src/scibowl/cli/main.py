@@ -9,6 +9,8 @@ from scibowl.dedupe.review_server import run_duplicate_review_server
 from scibowl.eval.baseline import run_baseline_eval
 from scibowl.eval.benchmark import build_evaluation_record
 from scibowl.eval.splits import build_rated_question_split
+from scibowl.generate.batch import run_generation_batch
+from scibowl.generation_review.server import run_generated_question_review_server
 from scibowl.ingest.nsb_samples import download_sample_packets
 from scibowl.generate.orchestration import GenerationOrchestrator
 from scibowl.ingest.normalize import validate_normalized_questions
@@ -105,16 +107,19 @@ def cmd_run_baseline_eval(args: argparse.Namespace) -> None:
         split_name=args.split_name,
         output_dir=Path(args.output_dir),
         questions_path=Path(args.questions) if args.questions else None,
+        style_questions_path=Path(args.style_questions) if args.style_questions else None,
         reviews_path=Path(args.reviews) if args.reviews else None,
         textbook_chunks_path=Path(args.textbook_chunks) if args.textbook_chunks else None,
         max_items=args.max_items,
+        max_per_category=args.max_per_category,
+        excluded_categories=args.exclude_category,
     )
     print(f"Wrote {len(records)} baseline evaluation records to {args.output_dir}")
 
 
 def cmd_demo_generate(args: argparse.Namespace) -> None:
     spec = QuestionSpec.model_validate(read_json(Path(args.spec)))
-    textbook_chunks = read_jsonl(Path(args.textbook_chunks), TextbookChunk)
+    textbook_chunks = _load_textbook_chunks_arg(Path(args.textbook_chunks))
     style_questions = read_jsonl(Path(args.style_questions), NormalizedQuestion)
 
     orchestrator = GenerationOrchestrator()
@@ -127,6 +132,15 @@ def cmd_demo_generate(args: argparse.Namespace) -> None:
     write_json(output_dir / "report.json", report.model_dump())
     write_json(output_dir / "evaluation.json", eval_record.model_dump())
     print(f"Wrote generation artifacts to {args.output_dir}")
+
+
+def _load_textbook_chunks_arg(path: Path) -> list[TextbookChunk]:
+    if path.is_dir():
+        chunks: list[TextbookChunk] = []
+        for jsonl_path in sorted(path.glob("*.jsonl")):
+            chunks.extend(read_jsonl(jsonl_path, TextbookChunk))
+        return chunks
+    return read_jsonl(path, TextbookChunk)
 
 
 def cmd_build_duplicate_candidates(args: argparse.Namespace) -> None:
@@ -167,6 +181,25 @@ def cmd_review_duplicates(args: argparse.Namespace) -> None:
         port=args.port,
         title=args.title,
     )
+
+
+def cmd_review_generated_questions(args: argparse.Namespace) -> None:
+    output_path = Path(args.output_path) if args.output_path else Path(args.runs_path).with_name(
+        Path(args.runs_path).stem + "_reviews.jsonl"
+    )
+    run_generated_question_review_server(
+        runs_path=Path(args.runs_path),
+        output_path=output_path,
+        reviewer_id=args.reviewer_id,
+        host=args.host,
+        port=args.port,
+        title=args.title,
+    )
+
+
+def cmd_generate_from_config(args: argparse.Namespace) -> None:
+    records = run_generation_batch(Path(args.config_path))
+    print(f"Wrote {len(records)} generated question runs from {args.config_path}")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -242,9 +275,12 @@ def build_parser() -> argparse.ArgumentParser:
     run_baseline_eval_cmd.add_argument("--split-name", default="test")
     run_baseline_eval_cmd.add_argument("--output-dir", required=True)
     run_baseline_eval_cmd.add_argument("--questions")
+    run_baseline_eval_cmd.add_argument("--style-questions")
     run_baseline_eval_cmd.add_argument("--reviews")
     run_baseline_eval_cmd.add_argument("--textbook-chunks")
     run_baseline_eval_cmd.add_argument("--max-items", type=int)
+    run_baseline_eval_cmd.add_argument("--max-per-category", type=int)
+    run_baseline_eval_cmd.add_argument("--exclude-category", action="append", default=["energy"])
     run_baseline_eval_cmd.set_defaults(func=cmd_run_baseline_eval)
 
     demo_generate = subparsers.add_parser("demo-generate")
@@ -259,7 +295,7 @@ def build_parser() -> argparse.ArgumentParser:
     build_duplicate_candidates_cmd.add_argument("--output-path", required=True)
     build_duplicate_candidates_cmd.add_argument("--summary-path")
     build_duplicate_candidates_cmd.add_argument("--model-name", default="mixedbread-ai/mxbai-embed-large-v1")
-    build_duplicate_candidates_cmd.add_argument("--threshold", type=float, default=0.82)
+    build_duplicate_candidates_cmd.add_argument("--threshold", type=float, default=0.5)
     build_duplicate_candidates_cmd.add_argument("--top-k", type=int, default=10)
     build_duplicate_candidates_cmd.add_argument("--batch-size", type=int, default=32)
     build_duplicate_candidates_cmd.add_argument("--device")
@@ -285,6 +321,19 @@ def build_parser() -> argparse.ArgumentParser:
     review_duplicates_cmd.add_argument("--port", type=int, default=8765)
     review_duplicates_cmd.add_argument("--title", default="Duplicate Review")
     review_duplicates_cmd.set_defaults(func=cmd_review_duplicates)
+
+    review_generated_cmd = subparsers.add_parser("review-generated-questions")
+    review_generated_cmd.add_argument("runs_path")
+    review_generated_cmd.add_argument("--output-path")
+    review_generated_cmd.add_argument("--reviewer-id", default="local_reviewer")
+    review_generated_cmd.add_argument("--host", default="127.0.0.1")
+    review_generated_cmd.add_argument("--port", type=int, default=8775)
+    review_generated_cmd.add_argument("--title", default="Generated Question Review")
+    review_generated_cmd.set_defaults(func=cmd_review_generated_questions)
+
+    generate_from_config_cmd = subparsers.add_parser("generate-from-config")
+    generate_from_config_cmd.add_argument("config_path")
+    generate_from_config_cmd.set_defaults(func=cmd_generate_from_config)
 
     return parser
 

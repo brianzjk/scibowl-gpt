@@ -15,7 +15,17 @@ Style Examples:
 
 Requirements:
 - Return exactly one question.
+- Write a new question from the requested category and topic; do not try to recreate any original/reference question.
+- The subject matter must be scientific or mathematical content, not metadata about a source.
+- Use the grounding facts as reference material for content.
+- Do not ask about the textbook, chapter, page, author, packet, or source document itself.
+- Style examples are for tone and format only; do not copy or lightly paraphrase them.
+- Test one main idea or skill.
+- Avoid obscure trivia, traps, negbait, and buzzer checks.
+- Use full-sentence Science Bowl wording.
+- Return valid JSON with exactly these top-level keys: question_text, answer_text, choices.
 - Keep the answer unambiguous.
 - If answer mode is multiple_choice, include exactly four choices labeled W, X, Y, Z.
+- For multiple_choice, keep the answer choices out of question_text and place them only in choices.
 - If answer mode is short_answer, return an empty choices array.
 - The answer_text must begin with "ANSWER:".

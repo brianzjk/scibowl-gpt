@@ -1,0 +1,45 @@
+output_path: data/processed/generated/example_batch.jsonl
+style_questions_path: data/interim/question_sets/style_corpus_all.jsonl
+textbook_chunks_path: data/interim/textbooks
+random_seed: 7
+
+jobs:
+#  - job_id: biology_membranes
+#    category: biology
+#    subcategory: cell biology
+#    question_type: tossup
+#    answer_mode: short_answer
+#    difficulty: 4
+#    count: 3
+#    topic_focus:
+#      - membrane transport
+#      - ion channels
+#
+#  - job_id: chemistry_equilibrium_mc
+#    category: chemistry
+#    subcategory: equilibrium
+#    question_type: bonus
+#    answer_mode: multiple_choice
+#    difficulty: 5
+#    count: 2
+#    topic_focus:
+#      - Le Chatelier's principle
+#      - equilibrium constants
+
+  - job_id: ess_random_batch
+    category: earth_space
+    subcategory_mode: random
+    question_type_mode: random
+    answer_mode_mode: random
+    difficulty_mode: random
+    difficulty_pool: [1, 2, 3, 4, 5, 6, 7]
+    count: 30
+
+  - job_id: math_random_batch
+    category: math
+    subcategory_mode: random
+    question_type_mode: random
+    answer_mode_mode: random
+    difficulty_mode: random
+    difficulty_pool: [1, 2, 3, 4, 5, 6, 7]
+    count: 30

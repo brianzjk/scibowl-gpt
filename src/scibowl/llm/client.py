@@ -21,7 +21,15 @@ class OpenAICompatibleChatClient:
         self.config = config
 
     @classmethod
-    def from_env(cls, *, provider_env: str, model_env: str, base_url_env: str, api_key_env: str) -> "OpenAICompatibleChatClient | None":
+    def from_env(
+        cls,
+        *,
+        provider_env: str,
+        model_env: str,
+        base_url_env: str,
+        api_key_env: str,
+        timeout_env: str | None = None,
+    ) -> "OpenAICompatibleChatClient | None":
         provider = os.getenv(provider_env, "").strip().lower()
         if provider not in {"openai_compatible", "openai-compatible"}:
             return None
@@ -37,6 +45,7 @@ class OpenAICompatibleChatClient:
                 model_name=model_name,
                 base_url=base_url.rstrip("/"),
                 api_key=os.getenv(api_key_env, "").strip() or None,
+                timeout_seconds=int(os.getenv(timeout_env, "120")) if timeout_env else 120,
             )
         )
 

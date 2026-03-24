@@ -1,24 +1,27 @@
 Review this generated Science Bowl question and return valid JSON with this exact shape:
-{
+{{
   "summary": "string",
-  "factual_issues": ["string"],
-  "answerability_issues": ["string"],
-  "style_issues": ["string"],
-  "difficulty_issues": ["string"],
+  "format_issues": ["string"],
+  "topic_issues": ["string"],
+  "scientific_accuracy_issues": ["string"],
   "required_revisions": ["string"],
-  "difficulty_estimate": 1,
+  "solver_answer": "string",
+  "solver_answer_matches_expected": true,
   "style_score": 0.0
-}
+}}
 
 Requested Spec:
 - Category: {category}
 - Subcategory: {subcategory}
+- Topic Focus: {topic_focus}
 - Type: {question_type}
 - Answer Mode: {answer_mode}
-- Difficulty: {difficulty}
 
 Draft Question:
 {question_text}
+
+Choices:
+{choices}
 
 Draft Answer:
 {answer_text}
@@ -30,7 +33,11 @@ Retrieved Fact Support:
 {facts}
 
 Instructions:
-- Report only issues that materially affect factuality, answerability, style, or difficulty alignment.
+- First answer the question yourself as a competitor would.
+- Compare your solved answer to the provided answer_text.
+- If your solved answer does not match the provided answer, report that under scientific_accuracy_issues.
+- Report only issues that materially affect formatting, grammar, topical fit, or scientific correctness.
 - Set style_score from 0.0 to 1.0.
-- Set difficulty_estimate from 1 to 7.
 - Prefer concise issue strings over long explanations.
+- Do not evaluate difficulty.
+- Do not evaluate novelty or duplicate risk.

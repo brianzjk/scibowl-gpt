@@ -61,17 +61,19 @@ class PromptWriterModel:
         self.model_info = ModelInfo(provider="openai_compatible", model_name=model_name, prompt_version=prompt_version)
 
     def generate(self, spec: QuestionSpec, bundle: RetrievalBundle) -> GeneratedDraft:
-        payload = self.client.complete_json(
-            system_prompt=load_template("writer_system.txt"),
-            user_prompt=render_writer_prompt(spec, bundle),
-            temperature=float(os.getenv("SCIBOWL_WRITER_TEMPERATURE", "0.2")),
-        )
-        question_text = str(payload["question_text"]).strip()
-        answer_text = str(payload["answer_text"]).strip()
-        choices = [
-            Choice(label=str(choice["label"]).strip(), text=str(choice["text"]).strip())
-            for choice in payload.get("choices", [])
-        ]
+        try:
+            payload = self.client.complete_json(
+                system_prompt=load_template("writer_system.txt"),
+                user_prompt=render_writer_prompt(spec, bundle),
+                temperature=float(os.getenv("SCIBOWL_WRITER_TEMPERATURE", "0.2")),
+            )
+            question_text, answer_text = _extract_writer_fields(payload)
+            choices = [
+                Choice(label=str(choice["label"]).strip(), text=str(choice["text"]).strip())
+                for choice in payload.get("choices", [])
+            ]
+        except Exception:
+            return _build_writer_fallback(spec, bundle, self.model_info)
         return build_generated_draft(
             spec=spec,
             bundle=bundle,
@@ -117,13 +119,39 @@ def build_generated_draft(
     )
 
 
+def _extract_writer_fields(payload: dict[str, object]) -> tuple[str, str]:
+    question_text = payload.get("question_text") or payload.get("question")
+    answer_text = payload.get("answer_text") or payload.get("answer")
+
+    if question_text is None and isinstance(payload.get("draft"), dict):
+        draft = payload["draft"]
+        if isinstance(draft, dict):
+            question_text = draft.get("question_text") or draft.get("question")
+            answer_text = answer_text or draft.get("answer_text") or draft.get("answer")
+
+    if question_text is None or answer_text is None:
+        available_keys = ", ".join(sorted(str(key) for key in payload.keys()))
+        raise RuntimeError(f"Writer response was missing question_text/answer_text. Payload keys: {available_keys}")
+
+    return str(question_text).strip(), str(answer_text).strip()
+
+
 def build_writer_model() -> PromptWriterModel | HeuristicWriterModel:
     client = OpenAICompatibleChatClient.from_env(
         provider_env="SCIBOWL_WRITER_PROVIDER",
         model_env="SCIBOWL_WRITER_MODEL",
         base_url_env="SCIBOWL_WRITER_BASE_URL",
         api_key_env="SCIBOWL_WRITER_API_KEY",
+        timeout_env="SCIBOWL_WRITER_TIMEOUT_SECONDS",
     )
     if client is None:
         return HeuristicWriterModel()
     return PromptWriterModel(client=client, model_name=client.config.model_name)
+
+
+def _build_writer_fallback(spec: QuestionSpec, bundle: RetrievalBundle, model_info: ModelInfo) -> GeneratedDraft:
+    fallback = HeuristicWriterModel(
+        model_name=f"{model_info.model_name}-fallback",
+        prompt_version=model_info.prompt_version,
+    )
+    return fallback.generate(spec, bundle)

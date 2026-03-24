@@ -44,13 +44,15 @@ def render_verifier_prompt(spec: QuestionSpec, draft: GeneratedDraft, bundle: Re
         f"- {citation.chunk_id}"
         for citation in draft.citations
     ) or "- none"
+    choices = "\n".join(f"- {choice.label}) {choice.text}" for choice in draft.question.choices) or "- none"
     return template.format(
         category=spec.category.value,
         subcategory=spec.subcategory,
         question_type=spec.question_type.value,
         answer_mode=spec.answer_mode.value,
-        difficulty=spec.difficulty,
+        topic_focus=", ".join(spec.topic_focus) or "none",
         question_text=draft.question.question_text,
+        choices=choices,
         answer_text=draft.question.answer_text,
         citations=citations,
         facts=facts,

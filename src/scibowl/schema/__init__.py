@@ -1,5 +1,5 @@
 from .common import AnswerMode, Category, Citation, ModelInfo, QuestionType, SourceType, Verdict
-from .dataset import EvaluationRecord, TrainingExample
+from .dataset import BaselineRunRecord, EvaluationRecord, GeneratedQuestionRunRecord, TrainingExample
 from .duplicate import DuplicateCandidate, DuplicateLabel, DuplicateMiningSummary, DuplicateReviewStatus
 from .manifest import DatasetArtifact, DatasetManifest
 from .generation import (
@@ -20,6 +20,7 @@ __all__ = [
     "AcceptedQuestion",
     "AnswerMode",
     "AnswerGuidance",
+    "BaselineRunRecord",
     "Category",
     "Choice",
     "Citation",
@@ -32,6 +33,7 @@ __all__ = [
     "DuplicateReviewStatus",
     "EvaluationRecord",
     "GeneratedDraft",
+    "GeneratedQuestionRunRecord",
     "HumanReview",
     "ModelInfo",
     "NormalizedQuestion",

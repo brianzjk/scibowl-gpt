@@ -5,17 +5,13 @@ from scibowl.schema.verification import VerifierReport
 
 
 def score_draft(spec: QuestionSpec, draft: GeneratedDraft, report: VerifierReport) -> dict[str, float]:
+    format_score = 1.0 if report.checks.format_compliance.passed else 0.0
     style_score = report.checks.style_alignment.style_score or 0.0
-    novelty_score = 1.0 - (report.checks.novelty.similarity_score or 0.0)
     factuality = 1.0 if report.checks.factual_grounding.passed else 0.0
-    difficulty = 1.0 if report.checks.difficulty_alignment.passed else 0.5
-    answer_uniqueness = 1.0 if report.checks.answerability.passed else 0.0
-    overall = round((style_score + novelty_score + factuality + difficulty + answer_uniqueness) / 5, 3)
+    overall = round((format_score + style_score + factuality) / 3, 3)
     return {
+        "format_compliance": format_score,
         "factuality": factuality,
         "style_alignment": round(style_score, 3),
-        "difficulty_alignment": difficulty,
-        "answer_uniqueness": answer_uniqueness,
-        "novelty": round(novelty_score, 3),
         "overall": overall,
     }

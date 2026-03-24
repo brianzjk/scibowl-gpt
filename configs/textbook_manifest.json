@@ -1,0 +1,20 @@
+{
+  "earth_space": [
+    "tarbuck_earth_science",
+    "seeds_foundations_of_astrophysics"
+  ],
+  "physics": [
+    "halliday_resnick_krane_volume_1",
+    "halliday_resnick_krane_volume_2",
+    "the_cosmic_onion"
+  ],
+  "chemistry": [
+    "atkins_general_chemistry",
+    "klein_organic_chemistry_3e"
+  ],
+  "biology": [
+    "campbell_biology_12e"
+  ],
+  "energy": [],
+  "math": []
+}

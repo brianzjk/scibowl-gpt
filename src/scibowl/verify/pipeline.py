@@ -3,7 +3,7 @@ from __future__ import annotations
 from scibowl.schema.common import ModelInfo
 from scibowl.schema.generation import GeneratedDraft, QuestionSpec, RetrievalBundle
 from scibowl.schema.question import NormalizedQuestion
-from scibowl.schema.verification import ReviewMetadata, VerificationIssue, VerifierReport
+from scibowl.schema.verification import ReviewMetadata, VerificationChecks, VerificationIssue, VerifierReport
 from scibowl.utils.ids import make_id
 from scibowl.verify.llm_verifier import PromptVerifierModel, build_verifier_model
 from scibowl.verify.rules import build_checks, derive_verdict
@@ -37,19 +37,21 @@ class VerifierService:
         llm_summary: str | None = None
         llm_required_revisions: list[str] = []
         if self.llm_model is not None:
-            review = self.llm_model.review(spec, draft, bundle)
-            self._merge_llm_review(checks, review)
-            llm_summary = str(review.get("summary", "")).strip() or None
-            llm_required_revisions = _as_issue_messages(review.get("required_revisions"))
+            try:
+                review = self.llm_model.review(spec, draft, bundle)
+            except Exception:
+                review = None
+            if review is not None:
+                self._merge_llm_review(checks, review)
+                llm_summary = str(review.get("summary", "")).strip() or None
+                llm_required_revisions = _as_issue_messages(review.get("required_revisions"))
         verdict = derive_verdict(checks)
         required_revisions = []
         for check in [
             checks.format_compliance,
             checks.factual_grounding,
             checks.answerability,
-            checks.difficulty_alignment,
             checks.style_alignment,
-            checks.novelty,
         ]:
             required_revisions.extend(issue.message for issue in check.issues)
         required_revisions.extend(item for item in llm_required_revisions if item not in required_revisions)
@@ -68,24 +70,32 @@ class VerifierService:
             ),
         )
 
-    def _merge_llm_review(self, checks, review: dict[str, object]) -> None:
-        for message in _as_issue_messages(review.get("factual_issues")):
-            checks.factual_grounding.issues.append(VerificationIssue(code="llm_factual_issue", message=message))
-        for message in _as_issue_messages(review.get("answerability_issues")):
-            checks.answerability.issues.append(VerificationIssue(code="llm_answerability_issue", message=message))
-        for message in _as_issue_messages(review.get("style_issues")):
-            checks.style_alignment.issues.append(VerificationIssue(code="llm_style_issue", message=message))
-        for message in _as_issue_messages(review.get("difficulty_issues")):
-            checks.difficulty_alignment.issues.append(VerificationIssue(code="llm_difficulty_issue", message=message))
+    def _merge_llm_review(self, checks: VerificationChecks, review: dict[str, object]) -> None:
+        for message in _as_issue_messages(review.get("format_issues")):
+            checks.format_compliance.issues.append(VerificationIssue(code="llm_format_issue", message=message))
+        for message in _as_issue_messages(review.get("topic_issues")):
+            checks.style_alignment.issues.append(VerificationIssue(code="llm_topic_issue", message=message))
+        for message in _as_issue_messages(review.get("scientific_accuracy_issues")):
+            checks.factual_grounding.issues.append(
+                VerificationIssue(code="llm_scientific_accuracy_issue", message=message)
+            )
 
+        solver_answer_matches_expected = review.get("solver_answer_matches_expected")
+        solver_answer = str(review.get("solver_answer", "")).strip()
+        if solver_answer_matches_expected is False:
+            mismatch_message = "Verifier-solved answer does not match the provided answer."
+            if solver_answer:
+                mismatch_message = (
+                    f"Verifier-solved answer does not match the provided answer. Solver answer: {solver_answer}"
+                )
+            checks.factual_grounding.issues.append(
+                VerificationIssue(code="solver_answer_mismatch", message=mismatch_message)
+            )
+
+        checks.format_compliance.passed = not checks.format_compliance.issues
         checks.factual_grounding.passed = not checks.factual_grounding.issues
         checks.answerability.passed = not checks.answerability.issues
         checks.style_alignment.passed = not checks.style_alignment.issues
-        checks.difficulty_alignment.passed = not checks.difficulty_alignment.issues
-
-        difficulty_estimate = review.get("difficulty_estimate")
-        if isinstance(difficulty_estimate, int):
-            checks.difficulty_alignment.estimated_difficulty = difficulty_estimate
 
         style_score = review.get("style_score")
         if isinstance(style_score, (int, float)):

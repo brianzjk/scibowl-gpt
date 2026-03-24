@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from pypdf import PdfReader
@@ -9,14 +10,11 @@ from scibowl.utils.ids import make_id, slugify
 from scibowl.utils.text import chunk_text, estimate_token_count, normalize_whitespace
 
 
-def _read_textbook_text(input_path: Path) -> str:
+def _read_textbook_pages(input_path: Path) -> list[str]:
     if input_path.suffix.lower() == ".pdf":
         reader = PdfReader(str(input_path))
-        pages: list[str] = []
-        for page in reader.pages:
-            pages.append(page.extract_text() or "")
-        return "\n".join(pages)
-    return input_path.read_text(encoding="utf-8")
+        return [page.extract_text() or "" for page in reader.pages]
+    return [input_path.read_text(encoding="utf-8")]
 
 
 def ingest_textbook_text(
@@ -25,7 +23,9 @@ def ingest_textbook_text(
     title: str | None = None,
     topics: list[str] | None = None,
 ) -> list[TextbookChunk]:
-    raw_text = _read_textbook_text(input_path)
+    pages = _read_textbook_pages(input_path)
+    trimmed_pages, trim_metadata = _trim_pages_after_contents(pages)
+    raw_text = "\n".join(trimmed_pages)
     normalized = normalize_whitespace(raw_text)
     doc_id = document_id or slugify(input_path.stem)
     doc_title = title or input_path.stem
@@ -46,7 +46,60 @@ def ingest_textbook_text(
                 text=chunk,
                 char_count=len(chunk),
                 token_count_est=estimate_token_count(chunk),
-                metadata={"source_path": str(input_path), "ingest_run_id": make_id("ingest")},
+                metadata={
+                    "source_path": str(input_path),
+                    "ingest_run_id": make_id("ingest"),
+                    **trim_metadata,
+                },
             )
         )
     return chunks
+
+
+def _trim_pages_after_contents(pages: list[str]) -> tuple[list[str], dict[str, object]]:
+    if not pages:
+        return [], {"front_matter_trimmed": False}
+
+    search_limit = min(len(pages), 40)
+    start_idx: int | None = None
+    for index in range(search_limit):
+        if _has_contents_heading(pages[index]):
+            start_idx = index
+            break
+
+    if start_idx is None:
+        return pages, {"front_matter_trimmed": False}
+
+    end_idx = start_idx
+    for index in range(start_idx, min(len(pages), start_idx + 10)):
+        if _looks_like_contents_page(pages[index]):
+            end_idx = index
+            continue
+        if index > start_idx:
+            break
+
+    content_start = min(end_idx + 1, len(pages) - 1)
+    return pages[content_start:], {
+        "front_matter_trimmed": True,
+        "contents_start_page": start_idx + 1,
+        "content_start_page": content_start + 1,
+    }
+
+
+def _has_contents_heading(text: str) -> bool:
+    lowered = text.lower()
+    return "table of contents" in lowered or bool(re.search(r"\bcontents\b", lowered))
+
+
+def _looks_like_contents_page(text: str) -> bool:
+    lowered = text.lower()
+    if _has_contents_heading(text):
+        return True
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    dotted_lines = sum("..." in line for line in lines)
+    indexed_lines = sum(
+        1
+        for line in lines
+        if re.search(r"(chapter|appendix|\d+(\.\d+)*)", line.lower()) and re.search(r"\d+\s*$", line)
+    )
+    return dotted_lines >= 2 or indexed_lines >= 3

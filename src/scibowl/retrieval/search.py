@@ -1,16 +1,42 @@
 from __future__ import annotations
 
+import json
 import re
+from functools import lru_cache
+from pathlib import Path
 
 from scibowl.schema.generation import QuestionSpec, RetrievalBundle, RetrievedFactChunk, RetrievedStyleExample
 from scibowl.schema.question import NormalizedQuestion
 from scibowl.schema.textbook import TextbookChunk
+from scibowl.utils.subcategories import expand_subcategory_phrases
 from scibowl.utils.text import lexical_overlap_score
 
 
 def _query_terms(spec: QuestionSpec) -> set[str]:
-    pieces = [spec.subcategory, *spec.topic_focus]
+    pieces: list[str] = []
+    for item in [spec.subcategory, *spec.topic_focus]:
+        pieces.extend(expand_subcategory_phrases(item))
     return set(re.findall(r"[a-z0-9]+", " ".join(pieces).lower()))
+
+
+@lru_cache(maxsize=1)
+def _load_textbook_manifest() -> dict[str, list[str]]:
+    path = Path(__file__).resolve().parents[3] / "configs" / "textbook_manifest.json"
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    return {str(key): [str(item) for item in value] for key, value in payload.items() if isinstance(value, list)}
+
+
+def _select_textbook_chunks(spec: QuestionSpec, textbook_chunks: list[TextbookChunk]) -> list[TextbookChunk]:
+    manifest = _load_textbook_manifest()
+    allowed_ids = manifest.get(spec.category.value)
+    if allowed_ids is None:
+        return textbook_chunks
+    if not allowed_ids:
+        return []
+    return [chunk for chunk in textbook_chunks if chunk.document_id in allowed_ids]
 
 
 def retrieve_bundle(
@@ -21,9 +47,10 @@ def retrieve_bundle(
     style_top_k: int = 3,
 ) -> RetrievalBundle:
     query_terms = _query_terms(spec)
+    relevant_chunks = _select_textbook_chunks(spec, textbook_chunks)
 
     fact_hits = sorted(
-        textbook_chunks,
+        relevant_chunks,
         key=lambda chunk: lexical_overlap_score(query_terms, f"{chunk.title} {' '.join(chunk.topics)} {chunk.text}"),
         reverse=True,
     )[:fact_top_k]
