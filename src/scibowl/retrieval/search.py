@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from functools import lru_cache
@@ -8,7 +9,12 @@ from pathlib import Path
 from scibowl.schema.generation import QuestionSpec, RetrievalBundle, RetrievedFactChunk, RetrievedStyleExample
 from scibowl.schema.question import NormalizedQuestion
 from scibowl.schema.textbook import TextbookChunk
-from scibowl.utils.subcategories import expand_subcategory_phrases
+from scibowl.utils.subcategories import (
+    EARTH_SPACE_ASTRO_SUBCATEGORIES,
+    EARTH_SPACE_EARTH_SUBCATEGORIES,
+    canonicalize_subcategory,
+    expand_subcategory_phrases,
+)
 from scibowl.utils.text import lexical_overlap_score
 
 
@@ -30,8 +36,18 @@ def _load_textbook_manifest() -> dict[str, list[str]]:
 
 
 def _select_textbook_chunks(spec: QuestionSpec, textbook_chunks: list[TextbookChunk]) -> list[TextbookChunk]:
+    if spec.must_use_sources:
+        required = {item.strip() for item in spec.must_use_sources if item.strip()}
+        return [chunk for chunk in textbook_chunks if chunk.document_id in required]
+
     manifest = _load_textbook_manifest()
     allowed_ids = manifest.get(spec.category.value)
+    if spec.category.value == "earth_space":
+        subcategory = canonicalize_subcategory(spec.subcategory)
+        if subcategory in EARTH_SPACE_ASTRO_SUBCATEGORIES:
+            allowed_ids = ["seeds_foundations_of_astrophysics"]
+        elif subcategory in EARTH_SPACE_EARTH_SUBCATEGORIES:
+            allowed_ids = ["tarbuck_earth_science"]
     if allowed_ids is None:
         return textbook_chunks
     if not allowed_ids:
@@ -49,25 +65,57 @@ def retrieve_bundle(
     query_terms = _query_terms(spec)
     relevant_chunks = _select_textbook_chunks(spec, textbook_chunks)
 
-    fact_hits = sorted(
+    fact_candidates = sorted(
         relevant_chunks,
-        key=lambda chunk: lexical_overlap_score(query_terms, f"{chunk.title} {' '.join(chunk.topics)} {chunk.text}"),
+        key=lambda chunk: _bundle_rank_score(
+            spec.spec_id,
+            chunk.chunk_id,
+            lexical_overlap_score(query_terms, f"{chunk.title} {' '.join(chunk.topics)} {chunk.text}"),
+        ),
         reverse=True,
-    )[:fact_top_k]
+    )[: max(fact_top_k * 8, 12)]
+    fact_hits = _select_diverse_hits(
+        spec.spec_id,
+        fact_candidates,
+        fact_top_k,
+        score_fn=lambda chunk: lexical_overlap_score(query_terms, f"{chunk.title} {' '.join(chunk.topics)} {chunk.text}"),
+        text_fn=lambda chunk: f"{chunk.title} {' '.join(chunk.topics)} {chunk.text}",
+        id_fn=lambda chunk: chunk.chunk_id,
+        diversity_penalty=0.35,
+    )
 
     style_hits = [
         question
         for question in style_questions
         if question.category == spec.category and question.question_type == spec.question_type
     ]
-    style_hits = sorted(
+    style_candidates = sorted(
         style_hits,
         key=lambda question: (
-            lexical_overlap_score(query_terms, f"{question.subcategory} {' '.join(question.content_tags)} {question.question_text}"),
+            _bundle_rank_score(
+                spec.spec_id,
+                question.question_id,
+                lexical_overlap_score(
+                    query_terms,
+                    f"{question.subcategory} {' '.join(question.content_tags)} {question.question_text}",
+                ),
+            ),
             -abs(question.difficulty - spec.difficulty),
         ),
         reverse=True,
-    )[:style_top_k]
+    )[: max(style_top_k * 8, 18)]
+    style_hits = _select_diverse_hits(
+        spec.spec_id,
+        style_candidates,
+        style_top_k,
+        score_fn=lambda question: lexical_overlap_score(
+            query_terms,
+            f"{question.subcategory} {' '.join(question.content_tags)} {question.question_text}",
+        ),
+        text_fn=lambda question: f"{question.subcategory} {' '.join(question.content_tags)} {question.question_text}",
+        id_fn=lambda question: question.question_id,
+        diversity_penalty=0.45,
+    )
 
     return RetrievalBundle(
         spec_id=spec.spec_id,
@@ -92,3 +140,60 @@ def retrieve_bundle(
             for question in style_hits
         ],
     )
+
+
+def _bundle_rank_score(spec_id: str, item_id: str, base_score: float) -> float:
+    return base_score + _stable_jitter(spec_id, item_id)
+
+
+def _stable_jitter(spec_id: str, item_id: str) -> float:
+    digest = hashlib.sha256(f"{spec_id}:{item_id}".encode("utf-8")).hexdigest()
+    return (int(digest[:8], 16) / 0xFFFFFFFF) * 0.01
+
+
+def _select_diverse_hits[T](
+    spec_id: str,
+    candidates: list[T],
+    top_k: int,
+    *,
+    score_fn,
+    text_fn,
+    id_fn,
+    diversity_penalty: float,
+) -> list[T]:
+    if top_k <= 0 or not candidates:
+        return []
+
+    selected: list[T] = []
+    remaining = list(candidates)
+    while remaining and len(selected) < top_k:
+        best_item = max(
+            remaining,
+            key=lambda item: _mmr_score(
+                spec_id,
+                id_fn(item),
+                score_fn(item),
+                text_fn(item),
+                [text_fn(existing) for existing in selected],
+                diversity_penalty,
+            ),
+        )
+        selected.append(best_item)
+        remaining.remove(best_item)
+    return selected
+
+
+def _mmr_score(
+    spec_id: str,
+    item_id: str,
+    base_score: float,
+    text: str,
+    selected_texts: list[str],
+    diversity_penalty: float,
+) -> float:
+    base = _bundle_rank_score(spec_id, item_id, base_score)
+    if not selected_texts:
+        return base
+    text_terms = set(re.findall(r"[a-z0-9]+", text.lower()))
+    redundancy = max(lexical_overlap_score(text_terms, selected_text) for selected_text in selected_texts)
+    return base - diversity_penalty * redundancy

@@ -25,6 +25,7 @@ def ingest_textbook_text(
 ) -> list[TextbookChunk]:
     pages = _read_textbook_pages(input_path)
     trimmed_pages, trim_metadata = _trim_pages_after_contents(pages)
+    trimmed_pages, back_matter_metadata = _trim_pages_before_back_matter(trimmed_pages)
     raw_text = "\n".join(trimmed_pages)
     normalized = normalize_whitespace(raw_text)
     doc_id = document_id or slugify(input_path.stem)
@@ -50,6 +51,7 @@ def ingest_textbook_text(
                     "source_path": str(input_path),
                     "ingest_run_id": make_id("ingest"),
                     **trim_metadata,
+                    **back_matter_metadata,
                 },
             )
         )
@@ -86,6 +88,20 @@ def _trim_pages_after_contents(pages: list[str]) -> tuple[list[str], dict[str, o
     }
 
 
+def _trim_pages_before_back_matter(pages: list[str]) -> tuple[list[str], dict[str, object]]:
+    if not pages:
+        return [], {"back_matter_trimmed": False}
+
+    search_start = max(0, len(pages) - 80)
+    for index in range(search_start, len(pages)):
+        if _has_back_matter_heading(pages[index]):
+            return pages[:index], {
+                "back_matter_trimmed": True,
+                "back_matter_start_page": index + 1,
+            }
+    return pages, {"back_matter_trimmed": False}
+
+
 def _has_contents_heading(text: str) -> bool:
     lowered = text.lower()
     return "table of contents" in lowered or bool(re.search(r"\bcontents\b", lowered))
@@ -103,3 +119,21 @@ def _looks_like_contents_page(text: str) -> bool:
         if re.search(r"(chapter|appendix|\d+(\.\d+)*)", line.lower()) and re.search(r"\d+\s*$", line)
     )
     return dotted_lines >= 2 or indexed_lines >= 3
+
+
+def _has_back_matter_heading(text: str) -> bool:
+    lowered = text.lower()
+    markers = (
+        "glossary",
+        "index",
+        "selected answers",
+        "answers to",
+        "answer key",
+        "references",
+        "bibliography",
+        "photo credits",
+        "credits",
+        "appendix",
+        "appendices",
+    )
+    return any(re.search(rf"\b{re.escape(marker)}\b", lowered) for marker in markers)

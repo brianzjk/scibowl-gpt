@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from scibowl.schema.generation import GeneratedDraft, QuestionSpec, RetrievalBundle
+from scibowl.utils.subcategories import subcategory_guidance_terms
 
 
 PROMPT_DIR = Path(__file__).resolve().parent / "templates"
@@ -25,6 +26,7 @@ def render_writer_prompt(spec: QuestionSpec, bundle: RetrievalBundle) -> str:
     return template.format(
         category=spec.category.value,
         subcategory=spec.subcategory,
+        subcategory_guidance=", ".join(subcategory_guidance_terms(spec.subcategory)) or "none",
         question_type=spec.question_type.value,
         answer_mode=spec.answer_mode.value,
         difficulty=spec.difficulty,
@@ -48,6 +50,7 @@ def render_verifier_prompt(spec: QuestionSpec, draft: GeneratedDraft, bundle: Re
     return template.format(
         category=spec.category.value,
         subcategory=spec.subcategory,
+        subcategory_guidance=", ".join(subcategory_guidance_terms(spec.subcategory)) or "none",
         question_type=spec.question_type.value,
         answer_mode=spec.answer_mode.value,
         topic_focus=", ".join(spec.topic_focus) or "none",

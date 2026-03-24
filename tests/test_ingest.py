@@ -1,7 +1,7 @@
 import shutil
 from pathlib import Path
 
-from scibowl.ingest.textbooks import _trim_pages_after_contents
+from scibowl.ingest.textbooks import _trim_pages_after_contents, _trim_pages_before_back_matter
 from scibowl.ingest.question_sets import normalize_mit_question_csv
 from scibowl.ingest.reviews import import_ratings_csv
 from scibowl.utils.ids import make_id
@@ -109,3 +109,19 @@ def test_trim_pages_after_contents_skips_front_matter() -> None:
     assert trimmed_pages[0].startswith("Chapter 1")
     assert metadata["front_matter_trimmed"] is True
     assert metadata["content_start_page"] == 3
+
+
+def test_trim_pages_before_back_matter_skips_glossary_and_index() -> None:
+    pages = [
+        "Chapter 10\nGroundwater moves through permeable material.",
+        "Chapter 11\nCold fronts form when advancing cold air undercuts warm air.",
+        "Glossary\nAquifer: a body of rock or sediment that stores groundwater.",
+        "Index\natmosphere, 10\naquifer, 55",
+    ]
+
+    trimmed_pages, metadata = _trim_pages_before_back_matter(pages)
+
+    assert len(trimmed_pages) == 2
+    assert trimmed_pages[-1].startswith("Chapter 11")
+    assert metadata["back_matter_trimmed"] is True
+    assert metadata["back_matter_start_page"] == 3

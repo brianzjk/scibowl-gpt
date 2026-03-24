@@ -90,6 +90,56 @@ def test_retrieve_bundle_filters_textbooks_by_subject_manifest() -> None:
     assert [chunk.document_id for chunk in bundle.fact_chunks] == ["campbell_biology_12e"]
 
 
+def test_retrieve_bundle_routes_earth_space_books_by_subcategory() -> None:
+    chunks = [
+        TextbookChunk(
+            chunk_id="seed1",
+            document_id="seeds_foundations_of_astrophysics",
+            title="Foundations of Astrophysics",
+            topics=["stars"],
+            text="Stars produce light by nuclear fusion.",
+            char_count=38,
+            token_count_est=6,
+            metadata={},
+        ),
+        TextbookChunk(
+            chunk_id="tar1",
+            document_id="tarbuck_earth_science",
+            title="Earth Science",
+            topics=["hydrology"],
+            text="Groundwater moves through permeable rock layers.",
+            char_count=48,
+            token_count_est=7,
+            metadata={},
+        ),
+    ]
+
+    astro_spec = QuestionSpec(
+        spec_id="spec_ast",
+        category=Category.EARTH_SPACE,
+        subcategory="Stars",
+        question_type=QuestionType.TOSSUP,
+        answer_mode=AnswerMode.SHORT_ANSWER,
+        difficulty=4,
+        topic_focus=["stellar fusion"],
+    )
+    earth_spec = QuestionSpec(
+        spec_id="spec_earth",
+        category=Category.EARTH_SPACE,
+        subcategory="Hydrology",
+        question_type=QuestionType.TOSSUP,
+        answer_mode=AnswerMode.SHORT_ANSWER,
+        difficulty=4,
+        topic_focus=["groundwater"],
+    )
+
+    astro_bundle = retrieve_bundle(astro_spec, chunks, [])
+    earth_bundle = retrieve_bundle(earth_spec, chunks, [])
+
+    assert [chunk.document_id for chunk in astro_bundle.fact_chunks] == ["seeds_foundations_of_astrophysics"]
+    assert [chunk.document_id for chunk in earth_bundle.fact_chunks] == ["tarbuck_earth_science"]
+
+
 def test_build_checks_flags_textbook_meta_questions_and_bad_multiple_choice() -> None:
     spec = QuestionSpec(
         spec_id="spec_3",
@@ -123,6 +173,72 @@ def test_build_checks_flags_textbook_meta_questions_and_bad_multiple_choice() ->
     assert any("source material" in message for message in answerability_messages)
     assert any("four choices labeled W, X, Y, Z" in message for message in format_messages)
     assert any("not embedded in question_text" in message for message in format_messages)
+
+
+def test_build_checks_flags_sentence_length_short_answer_lines() -> None:
+    spec = QuestionSpec(
+        spec_id="spec_sentence_answer",
+        category=Category.EARTH_SPACE,
+        subcategory="Hydrology",
+        question_type=QuestionType.TOSSUP,
+        answer_mode=AnswerMode.SHORT_ANSWER,
+        difficulty=4,
+        topic_focus=["groundwater"],
+    )
+    draft = GeneratedDraft(
+        draft_id="draft_sentence_answer",
+        spec_id=spec.spec_id,
+        model_info=ModelInfo(provider="local", model_name="test", prompt_version="writer_v1"),
+        question=DraftQuestion(
+            category=Category.EARTH_SPACE,
+            subcategory="Hydrology",
+            question_type=QuestionType.TOSSUP,
+            answer_mode=AnswerMode.SHORT_ANSWER,
+            difficulty=4,
+            question_text="What is the name of the process by which water enters soil from the surface?",
+            answer_text="ANSWER: It is the process in which water moves from the surface into the soil.",
+        ),
+    )
+
+    checks = build_checks(spec, draft, retrieve_bundle(spec, [], []), [])
+
+    assert any(issue.code == "sentence_answer_for_short_answer" for issue in checks.answerability.issues)
+
+
+def test_build_checks_flags_multiple_choice_without_required_phrase() -> None:
+    spec = QuestionSpec(
+        spec_id="spec_missing_phrase",
+        category=Category.CHEMISTRY,
+        subcategory="equilibrium",
+        question_type=QuestionType.BONUS,
+        answer_mode=AnswerMode.MULTIPLE_CHOICE,
+        difficulty=4,
+        topic_focus=["equilibrium"],
+    )
+    draft = GeneratedDraft(
+        draft_id="draft_missing_phrase",
+        spec_id=spec.spec_id,
+        model_info=ModelInfo(provider="local", model_name="test", prompt_version="writer_v1"),
+        question=DraftQuestion(
+            category=Category.CHEMISTRY,
+            subcategory="equilibrium",
+            question_type=QuestionType.BONUS,
+            answer_mode=AnswerMode.MULTIPLE_CHOICE,
+            difficulty=4,
+            question_text="At equilibrium, adding more reactant shifts the system in which direction?",
+            answer_text="ANSWER: to the right",
+            choices=[
+                {"label": "W", "text": "to the left"},
+                {"label": "X", "text": "to the right"},
+                {"label": "Y", "text": "no change"},
+                {"label": "Z", "text": "cannot be determined"},
+            ],
+        ),
+    )
+
+    checks = build_checks(spec, draft, retrieve_bundle(spec, [], []), [])
+
+    assert any(issue.code == "missing_which_of_the_following" for issue in checks.format_compliance.issues)
 
 
 def test_build_checks_flags_supplemental_source_chunks() -> None:
@@ -237,10 +353,12 @@ def test_verifier_service_merges_solver_based_llm_feedback() -> None:
                 "summary": "Question is on topic, but the solved answer does not match the provided answer.",
                 "format_issues": ["Tighten the question wording into a cleaner interrogative sentence."],
                 "topic_issues": [],
+                "style_issues": ["Question is too much of a reaction-speed test."],
                 "scientific_accuracy_issues": ["Solving the question gives A-type stars, not O-type stars."],
                 "required_revisions": ["Fix the answer so it matches the science."],
                 "solver_answer": "A-type stars",
                 "solver_answer_matches_expected": False,
+                "topic_score": 0.9,
                 "style_score": 0.6,
             }
 
@@ -250,5 +368,7 @@ def test_verifier_service_merges_solver_based_llm_feedback() -> None:
     assert any(issue.code == "llm_format_issue" for issue in report.checks.format_compliance.issues)
     assert any(issue.code == "llm_scientific_accuracy_issue" for issue in report.checks.factual_grounding.issues)
     assert any(issue.code == "solver_answer_mismatch" for issue in report.checks.factual_grounding.issues)
+    assert any(issue.code == "llm_style_issue" for issue in report.checks.style_alignment.issues)
+    assert report.checks.topic_alignment.style_score == 0.9
     assert report.checks.style_alignment.style_score == 0.6
     assert "Fix the answer so it matches the science." in report.required_revisions
