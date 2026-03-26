@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 from scibowl.eval.benchmark import build_evaluation_record
 from scibowl.generate.orchestration import GenerationOrchestrator
-from scibowl.schema.common import AnswerMode, Category, QuestionType
+from scibowl.schema.common import Category, QuestionType
 from scibowl.schema.dataset import GeneratedQuestionRunRecord
 from scibowl.schema.generation import QuestionSpec
 from scibowl.schema.question import NormalizedQuestion
@@ -21,10 +21,6 @@ from scibowl.utils.subcategories import DEFAULT_RANDOM_SUBCATEGORY_POOLS
 DEFAULT_RANDOM_QUESTION_TYPES: tuple[QuestionType, ...] = (
     QuestionType.TOSSUP,
     QuestionType.BONUS,
-)
-DEFAULT_RANDOM_ANSWER_MODES: tuple[AnswerMode, ...] = (
-    AnswerMode.SHORT_ANSWER,
-    AnswerMode.MULTIPLE_CHOICE,
 )
 DEFAULT_RANDOM_DIFFICULTIES: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7)
 
@@ -38,9 +34,6 @@ class GenerationJobConfig(BaseModel):
     question_type: QuestionType | None = QuestionType.TOSSUP
     question_type_mode: Literal["fixed", "random"] = "fixed"
     question_type_pool: list[QuestionType] = Field(default_factory=list)
-    answer_mode: AnswerMode | None = AnswerMode.SHORT_ANSWER
-    answer_mode_mode: Literal["fixed", "random"] = "fixed"
-    answer_mode_pool: list[AnswerMode] = Field(default_factory=list)
     difficulty: int | None = None
     difficulty_mode: Literal["fixed", "random"] = "fixed"
     difficulty_pool: list[int] = Field(default_factory=list)
@@ -71,8 +64,6 @@ class GenerationJobConfig(BaseModel):
                 )
         if self.question_type_mode == "fixed" and self.question_type is None:
             raise ValueError("question_type is required unless question_type_mode is 'random'")
-        if self.answer_mode_mode == "fixed" and self.answer_mode is None:
-            raise ValueError("answer_mode is required unless answer_mode_mode is 'random'")
         if self.difficulty_mode == "fixed" and self.difficulty is None:
             raise ValueError("difficulty is required unless difficulty_mode is 'random'")
         if self.difficulty is not None and not 1 <= self.difficulty <= 7:
@@ -114,14 +105,13 @@ def run_generation_batch(config_path: Path) -> list[GeneratedQuestionRunRecord]:
         for index in range(job.count):
             selected_subcategory = _select_subcategory(job, rng)
             selected_question_type = _select_question_type(job, rng)
-            selected_answer_mode = _select_answer_mode(job, rng)
             selected_difficulty = _select_difficulty(job, rng)
             spec = QuestionSpec(
                 spec_id=make_id("spec"),
                 category=job.category,
                 subcategory=selected_subcategory,
                 question_type=selected_question_type,
-                answer_mode=selected_answer_mode,
+                answer_mode=None,
                 difficulty=selected_difficulty,
                 topic_focus=job.topic_focus or [selected_subcategory],
                 must_use_sources=job.must_use_sources,
@@ -146,8 +136,8 @@ def run_generation_batch(config_path: Path) -> list[GeneratedQuestionRunRecord]:
                     "selected_subcategory": selected_subcategory,
                     "question_type_mode": job.question_type_mode,
                     "selected_question_type": selected_question_type.value,
-                    "answer_mode_mode": job.answer_mode_mode,
-                    "selected_answer_mode": selected_answer_mode.value,
+                    "answer_mode_mode": "writer_selected",
+                    "selected_answer_mode": draft.question.answer_mode.value,
                     "difficulty_mode": job.difficulty_mode,
                     "selected_difficulty": selected_difficulty,
                 },
@@ -160,7 +150,7 @@ def run_generation_batch(config_path: Path) -> list[GeneratedQuestionRunRecord]:
                 f"[{completed}/{total_requested}] "
                 f"{job_id} #{index + 1}: "
                 f"{selected_subcategory} / {selected_question_type.value} / "
-                f"{selected_answer_mode.value} / difficulty {selected_difficulty}"
+                f"{draft.question.answer_mode.value} / difficulty {selected_difficulty}"
             )
     return records
 
@@ -179,12 +169,9 @@ def _default_job_id(job: GenerationJobConfig) -> str:
     question_type_label = (
         job.question_type.value if job.question_type_mode == "fixed" and job.question_type is not None else "random_question_type"
     )
-    answer_mode_label = (
-        job.answer_mode.value if job.answer_mode_mode == "fixed" and job.answer_mode is not None else "random_answer_mode"
-    )
     difficulty_label = str(job.difficulty) if job.difficulty_mode == "fixed" and job.difficulty is not None else "random_difficulty"
     return slugify(
-        f"{job.category.value}_{subcategory_label}_{question_type_label}_{answer_mode_label}_{difficulty_label}"
+        f"{job.category.value}_{subcategory_label}_{question_type_label}_writer_selected_{difficulty_label}"
     )
 
 
@@ -200,14 +187,6 @@ def _select_question_type(job: GenerationJobConfig, rng: random.Random) -> Quest
         assert job.question_type is not None
         return job.question_type
     pool = job.question_type_pool or list(DEFAULT_RANDOM_QUESTION_TYPES)
-    return rng.choice(pool)
-
-
-def _select_answer_mode(job: GenerationJobConfig, rng: random.Random) -> AnswerMode:
-    if job.answer_mode_mode == "fixed":
-        assert job.answer_mode is not None
-        return job.answer_mode
-    pool = job.answer_mode_pool or list(DEFAULT_RANDOM_ANSWER_MODES)
     return rng.choice(pool)
 
 

@@ -1,6 +1,9 @@
 Write one Science Bowl question with these constraints.
 
 Category: {category}
+Category-Specific Writing Guidance:
+{category_guidance}
+
 Subcategory: {subcategory}
 Subcategory Guidance: {subcategory_guidance}
 Type: {question_type}
@@ -24,17 +27,22 @@ Requirements:
 - Test one main idea or skill, preferably in a conceptual way rather than as direct fact recall.
 - Prefer explanation, comparison, prediction, interpretation, or application over pure definition lookup.
 - When possible, make the student connect two ideas or apply a principle, not just recall a single memorized statement.
+- Use clueing language and logical transitions that help narrow toward the answer rather than hiding the task until the very end.
+- In general, place harder or subtler clues earlier and more obvious clues later.
+- State the actual interrogative target early enough that players know what concept, quantity, or process they are being asked for before the final few words.
 - Avoid obscure trivia, traps, negbait, and buzzer checks.
 - Do not write reaction-speed tests.
 - Do not include unnecessary flavor text or a throwaway second sentence.
 - Do not put the answer or an obvious near-copy of it in the question stem.
 - Use full-sentence Science Bowl wording.
 - Return valid JSON with exactly these top-level keys: question_text, answer_text, choices.
+- Choose whether the final question should be short_answer or multiple_choice based on what best fits the concept.
+- Prefer short_answer by default; only use multiple_choice when it materially improves clarity, fairness, or ambiguity control.
 - Keep the answer unambiguous.
-- If answer mode is multiple_choice, include exactly four choices labeled W, X, Y, Z.
-- If answer mode is multiple_choice, the question_text must explicitly contain the exact phrase "Which of the following".
+- If you choose multiple_choice, include exactly four choices labeled W, X, Y, Z.
+- If you choose multiple_choice, the question_text must explicitly contain the exact phrase "Which of the following".
 - For multiple_choice, keep the answer choices out of question_text and place them only in choices.
-- If answer mode is short_answer, return an empty choices array.
-- If answer mode is short_answer, the answer_text should usually be a concise term, name, number, formula, or short phrase, not a full sentence.
+- If you choose short_answer, return an empty choices array.
+- If you choose short_answer, the answer_text should usually be a concise term, name, number, formula, or short phrase, not a full sentence.
 - If the answer would need sentence-length explanation, rewrite the question or make it multiple_choice instead.
 - The answer_text must begin with "ANSWER:".

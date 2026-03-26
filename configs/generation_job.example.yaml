@@ -8,7 +8,6 @@ jobs:
 #    category: biology
 #    subcategory: cell biology
 #    question_type: tossup
-#    answer_mode: short_answer
 #    difficulty: 4
 #    count: 3
 #    topic_focus:
@@ -19,7 +18,6 @@ jobs:
 #    category: chemistry
 #    subcategory: equilibrium
 #    question_type: bonus
-#    answer_mode: multiple_choice
 #    difficulty: 5
 #    count: 2
 #    topic_focus:
@@ -30,7 +28,6 @@ jobs:
     category: earth_space
     subcategory_mode: random
     question_type_mode: random
-    answer_mode_mode: random
     difficulty_mode: random
     difficulty_pool: [1, 2, 3, 4, 5, 6, 7]
     count: 30
@@ -39,7 +36,6 @@ jobs:
     category: math
     subcategory_mode: random
     question_type_mode: random
-    answer_mode_mode: random
     difficulty_mode: random
     difficulty_pool: [1, 2, 3, 4, 5, 6, 7]
     count: 30

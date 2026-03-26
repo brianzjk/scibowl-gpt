@@ -95,7 +95,6 @@ def test_run_generation_batch_writes_records(monkeypatch) -> None:
                 "    category: biology",
                 "    subcategory: cell biology",
                 "    question_type: tossup",
-                "    answer_mode: short_answer",
                 "    difficulty: 4",
                 "    count: 1",
                 "    topic_focus:",
@@ -149,6 +148,10 @@ def test_run_generation_batch_writes_records(monkeypatch) -> None:
     written = read_jsonl(output_path, GeneratedQuestionRunRecord)
     assert len(written) == 1
     assert written[0].job_id == "bio_test"
+    assert written[0].spec.answer_mode is None
+    assert written[0].draft.question.answer_mode == AnswerMode.SHORT_ANSWER
+    assert written[0].metadata["answer_mode_mode"] == "writer_selected"
+    assert written[0].metadata["selected_answer_mode"] == "short_answer"
 
     shutil.rmtree(tmp_path)
 
@@ -175,7 +178,6 @@ def test_run_generation_batch_supports_random_subcategory_mode(monkeypatch) -> N
                 "    category: math",
                 "    subcategory_mode: random",
                 "    question_type: tossup",
-                "    answer_mode: short_answer",
                 "    difficulty: 4",
                 "    count: 3",
             ]
@@ -193,7 +195,7 @@ def test_run_generation_batch_supports_random_subcategory_mode(monkeypatch) -> N
                     category=spec.category,
                     subcategory=spec.subcategory,
                     question_type=spec.question_type,
-                    answer_mode=spec.answer_mode,
+                    answer_mode=AnswerMode.SHORT_ANSWER,
                     difficulty=spec.difficulty,
                     question_text=f"Test question about {spec.subcategory}.",
                     answer_text="ANSWER: test",
@@ -254,7 +256,6 @@ def test_run_generation_batch_supports_random_question_shape_and_difficulty(monk
                 "  - category: earth_space",
                 "    subcategory_mode: random",
                 "    question_type_mode: random",
-                "    answer_mode_mode: random",
                 "    difficulty_mode: random",
                 "    difficulty_pool: [2, 6]",
                 "    count: 4",
@@ -265,15 +266,16 @@ def test_run_generation_batch_supports_random_question_shape_and_difficulty(monk
 
     class FakeOrchestrator:
         def run(self, spec, textbook_chunks, style_questions):
+            inferred_mode = AnswerMode.MULTIPLE_CHOICE if spec.question_type == QuestionType.BONUS else AnswerMode.SHORT_ANSWER
             draft = GeneratedDraft(
-                draft_id=f"draft_{spec.subcategory}_{spec.question_type.value}_{spec.answer_mode.value}_{spec.difficulty}",
+                draft_id=f"draft_{spec.subcategory}_{spec.question_type.value}_{inferred_mode.value}_{spec.difficulty}",
                 spec_id=spec.spec_id,
                 model_info=ModelInfo(provider="local", model_name="test-writer", prompt_version="writer_v1"),
                 question=DraftQuestion(
                     category=spec.category,
                     subcategory=spec.subcategory,
                     question_type=spec.question_type,
-                    answer_mode=spec.answer_mode,
+                    answer_mode=inferred_mode,
                     difficulty=spec.difficulty,
                     question_text=f"Test question about {spec.subcategory}.",
                     answer_text="ANSWER: test",
@@ -306,12 +308,13 @@ def test_run_generation_batch_supports_random_question_shape_and_difficulty(monk
     written = read_jsonl(output_path, GeneratedQuestionRunRecord)
     assert len(written) == 4
     assert {record.spec.question_type for record in written}.issubset({QuestionType.TOSSUP, QuestionType.BONUS})
-    assert {record.spec.answer_mode for record in written}.issubset(
+    assert {record.spec.answer_mode for record in written} == {None}
+    assert {record.draft.question.answer_mode for record in written}.issubset(
         {AnswerMode.SHORT_ANSWER, AnswerMode.MULTIPLE_CHOICE}
     )
     assert {record.spec.difficulty for record in written}.issubset({2, 6})
     assert all(record.metadata["question_type_mode"] == "random" for record in written)
-    assert all(record.metadata["answer_mode_mode"] == "random" for record in written)
+    assert all(record.metadata["answer_mode_mode"] == "writer_selected" for record in written)
     assert all(record.metadata["difficulty_mode"] == "random" for record in written)
 
     shutil.rmtree(tmp_path)

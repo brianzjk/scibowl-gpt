@@ -20,7 +20,7 @@ class QuestionSpec(BaseModel):
     category: Category
     subcategory: str
     question_type: QuestionType
-    answer_mode: AnswerMode
+    answer_mode: AnswerMode | None = None
     difficulty: int
     topic_focus: list[str] = Field(default_factory=list)
     must_use_sources: list[str] = Field(default_factory=list)

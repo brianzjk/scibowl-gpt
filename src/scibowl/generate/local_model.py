@@ -4,7 +4,7 @@ import os
 
 from scibowl.llm.client import OpenAICompatibleChatClient
 from scibowl.prompts.renderer import load_template, render_writer_prompt
-from scibowl.schema.common import Citation, ModelInfo
+from scibowl.schema.common import AnswerMode, Citation, ModelInfo
 from scibowl.schema.generation import DraftQuestion, GeneratedDraft, QuestionSpec, RetrievalBundle
 from scibowl.schema.question import Choice
 from scibowl.utils.ids import make_id
@@ -27,7 +27,8 @@ class HeuristicWriterModel:
             f"{fact_text[:220].rstrip('.')}."
         ).strip()
 
-        if spec.answer_mode.value == "multiple_choice":
+        answer_mode = _fallback_answer_mode(spec)
+        if answer_mode == AnswerMode.MULTIPLE_CHOICE:
             question_text += " W) option one X) option two Y) option three Z) option four"
             answer_text = "ANSWER: W) option one"
             choices = [
@@ -93,6 +94,7 @@ def build_generated_draft(
     answer_text: str,
     choices: list[Choice],
 ) -> GeneratedDraft:
+    inferred_answer_mode = infer_answer_mode(question_text=question_text, answer_text=answer_text, choices=choices)
     citations = [
         Citation(
             source_id=chunk.document_id,
@@ -109,7 +111,7 @@ def build_generated_draft(
             category=spec.category,
             subcategory=spec.subcategory,
             question_type=spec.question_type,
-            answer_mode=spec.answer_mode,
+            answer_mode=inferred_answer_mode,
             difficulty=spec.difficulty,
             question_text=question_text,
             answer_text=answer_text,
@@ -155,3 +157,24 @@ def _build_writer_fallback(spec: QuestionSpec, bundle: RetrievalBundle, model_in
         prompt_version=model_info.prompt_version,
     )
     return fallback.generate(spec, bundle)
+
+
+def infer_answer_mode(*, question_text: str, answer_text: str, choices: list[Choice]) -> AnswerMode:
+    if choices:
+        return AnswerMode.MULTIPLE_CHOICE
+
+    lowered_question = question_text.lower()
+    lowered_answer = answer_text.lower()
+    if "which of the following" in lowered_question:
+        return AnswerMode.MULTIPLE_CHOICE
+    if lowered_answer.startswith("answer: w)") or lowered_answer.startswith("answer: x)") or lowered_answer.startswith("answer: y)") or lowered_answer.startswith("answer: z)"):
+        return AnswerMode.MULTIPLE_CHOICE
+    return AnswerMode.SHORT_ANSWER
+
+
+def _fallback_answer_mode(spec: QuestionSpec) -> AnswerMode:
+    if spec.answer_mode is not None:
+        return spec.answer_mode
+    if spec.question_type.value == "bonus":
+        return AnswerMode.MULTIPLE_CHOICE
+    return AnswerMode.SHORT_ANSWER

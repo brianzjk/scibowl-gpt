@@ -51,7 +51,6 @@ jobs:
     category: biology
     subcategory: cell biology
     question_type: tossup
-    answer_mode: short_answer
     difficulty: 4
     count: 3
     topic_focus:
@@ -62,7 +61,6 @@ jobs:
     category: earth_space
     subcategory_mode: random
     question_type_mode: random
-    answer_mode_mode: random
     difficulty_mode: random
     difficulty_pool: [3, 4, 5]
     count: 5
@@ -72,13 +70,13 @@ jobs:
 
 - `energy` jobs are rejected.
 - `subcategory` is required only for normal fixed jobs. If you set `subcategory_mode: random`, the generator will sample a subcategory for each requested question.
-- `question_type`, `answer_mode`, and `difficulty` also support `*_mode: random`.
+- `question_type` and `difficulty` also support `*_mode: random`.
+- `answer_mode` is always writer-selected and is inferred from the model output.
 - Built-in random pools:
   - `question_type`: `tossup`, `bonus`
-  - `answer_mode`: `short_answer`, `multiple_choice`
   - `difficulty`: `1-7`
 - You can optionally set `subcategory_pool` on a random job to override the default pool.
-- You can also override `question_type_pool`, `answer_mode_pool`, or `difficulty_pool` on a random job.
+- You can also override `question_type_pool` or `difficulty_pool` on a random job.
 - `random_seed` is optional, but useful if you want reproducible random sampling across all random job fields.
 - The built-in random pools currently use these canonical subcategories:
   - `earth_space`: `Cosmology`, `Hydrology`, `Meteorology`, `Observation`, `Rocks and Minerals`, `Solar System`, `Stars`, `Tectonics`

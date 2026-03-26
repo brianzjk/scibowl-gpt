@@ -72,7 +72,7 @@ def run_baseline_eval(
             category=question.category,
             subcategory=question.subcategory,
             question_type=question.question_type,
-            answer_mode=question.answer_mode,
+            answer_mode=None,
             difficulty=question.difficulty,
             topic_focus=question.content_tags or [question.subcategory],
             style_target_ids=[],

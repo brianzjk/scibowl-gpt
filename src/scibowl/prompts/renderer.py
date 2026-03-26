@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from scibowl.prompts.category_guidance import category_prompt_guidance
 from scibowl.schema.generation import GeneratedDraft, QuestionSpec, RetrievalBundle
 from scibowl.utils.subcategories import subcategory_guidance_terms
 
@@ -25,10 +26,11 @@ def render_writer_prompt(spec: QuestionSpec, bundle: RetrievalBundle) -> str:
     ) or "- none"
     return template.format(
         category=spec.category.value,
+        category_guidance="\n".join(f"- {line}" for line in category_prompt_guidance(spec.category)) or "- none",
         subcategory=spec.subcategory,
         subcategory_guidance=", ".join(subcategory_guidance_terms(spec.subcategory)) or "none",
         question_type=spec.question_type.value,
-        answer_mode=spec.answer_mode.value,
+        answer_mode=spec.answer_mode.value if spec.answer_mode is not None else "writer_selected",
         difficulty=spec.difficulty,
         topic_focus=", ".join(spec.topic_focus) or "none",
         facts=facts,
@@ -52,7 +54,7 @@ def render_verifier_prompt(spec: QuestionSpec, draft: GeneratedDraft, bundle: Re
         subcategory=spec.subcategory,
         subcategory_guidance=", ".join(subcategory_guidance_terms(spec.subcategory)) or "none",
         question_type=spec.question_type.value,
-        answer_mode=spec.answer_mode.value,
+        answer_mode=draft.question.answer_mode.value,
         topic_focus=", ".join(spec.topic_focus) or "none",
         question_text=draft.question.question_text,
         choices=choices,
