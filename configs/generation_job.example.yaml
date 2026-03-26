@@ -1,6 +1,6 @@
-output_path: data/processed/generated/example_batch.jsonl
-style_questions_path: data/interim/question_sets/style_corpus_all.jsonl
-textbook_chunks_path: data/interim/textbooks
+output_path: ../data/processed/generated/example_batch.jsonl
+style_questions_path: ../data/interim/question_sets/style_corpus_all.jsonl
+textbook_chunks_path: ../data/interim/textbooks
 random_seed: 7
 
 jobs:

@@ -30,8 +30,8 @@ Those JSONL files can be reviewed in the generated-question review website with:
 
 ```powershell
 .venv\Scripts\python.exe -m scibowl.cli.main review-generated-questions `
-  data/processed/generated/example_batch.jsonl `
-  --output-path data/processed/reviews/example_batch_reviews.jsonl `
+  ../data/processed/generated/example_batch.jsonl `
+  --output-path ../data/processed/reviews/example_batch_reviews.jsonl `
   --reviewer-id brian `
   --host 127.0.0.1 `
   --port 8775 `
@@ -41,9 +41,9 @@ Those JSONL files can be reviewed in the generated-question review website with:
 ## Config Shape
 
 ```yaml
-output_path: data/processed/generated/example_batch.jsonl
-style_questions_path: data/interim/question_sets/style_corpus_all.jsonl
-textbook_chunks_path: data/interim/textbooks
+output_path: ../data/processed/generated/example_batch.jsonl
+style_questions_path: ../data/interim/question_sets/style_corpus_all.jsonl
+textbook_chunks_path: ../data/interim/textbooks
 random_seed: 7
 
 jobs:
@@ -84,3 +84,4 @@ jobs:
 - The random pools intentionally exclude broad/noisy labels like `other` and `Random`.
 - The generator uses textbooks as factual reference material and style examples only for tone/format.
 - The review website shows only the generated question and verifier output; it does not compare against a held-out reference question.
+- After the repo split, the recommended convention is to keep generated artifacts under `../data` rather than inside the repo.

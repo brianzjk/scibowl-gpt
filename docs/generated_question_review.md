@@ -14,11 +14,11 @@ The baseline evaluation now writes two files:
 For the current Ollama baseline, the main review corpus is:
 
 - Iteration-sized sample, recommended for prompt tuning:
-  - `data/processed/eval/baseline_ollama_gptoss20b_iter_5_per_category_v2/test_baseline_runs.jsonl`
+  - `../data/processed/eval/baseline_ollama_gptoss20b_iter_5_per_category_v2/test_baseline_runs.jsonl`
   - `25` questions total, `5` each from biology, chemistry, earth/space, math, and physics
   - `energy` is intentionally excluded
 - Full benchmark run:
-  - `data/processed/eval/baseline_ollama_gptoss20b/test_baseline_runs.jsonl`
+  - `../data/processed/eval/baseline_ollama_gptoss20b/test_baseline_runs.jsonl`
   - `189` questions total
 
 ## Run The Review Website
@@ -27,8 +27,8 @@ From the repo root:
 
 ```powershell
 .venv\Scripts\python.exe -m scibowl.cli.main review-generated-questions `
-  data/processed/eval/baseline_ollama_gptoss20b_iter_5_per_category_v2/test_baseline_runs.jsonl `
-  --output-path data/processed/reviews/baseline_ollama_gptoss20b_iter_5_per_category_v2_reviews.jsonl `
+  ../data/processed/eval/baseline_ollama_gptoss20b_iter_5_per_category_v2/test_baseline_runs.jsonl `
+  --output-path ../data/processed/reviews/baseline_ollama_gptoss20b_iter_5_per_category_v2_reviews.jsonl `
   --reviewer-id brian `
   --host 127.0.0.1 `
   --port 8775 `
@@ -69,3 +69,4 @@ Reviews are saved incrementally to the JSONL you pass as `--output-path`. That f
 - The website recalculates the displayed verifier scores from the stored verifier report, so older generation runs can still be reviewed under the current rubric without rerunning generation.
 - If you rerun baseline generation into the same output directory, `test_baseline_runs.jsonl` will resume missing artifacts instead of duplicating existing run rows.
 - For faster iteration, prefer the `iter_5_per_category_v2` run over the full benchmark run.
+- After the repo split, the recommended convention is to keep runs and reviews under `../data`.

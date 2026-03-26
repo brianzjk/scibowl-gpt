@@ -37,6 +37,6 @@ def test_normalized_question_validates() -> None:
 
 def test_dataset_manifest_validates() -> None:
     manifest = DatasetManifest.model_validate(
-        read_json(Path("data/processed/manifests/mit_2025_rated_corpus.json"))
+        read_json(Path("../data/processed/manifests/mit_2025_rated_corpus.json"))
     )
     assert manifest.role == "rated_corpus"

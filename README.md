@@ -1,30 +1,36 @@
 # scibowl-gpt
 
-Science Bowl question-generation workspace with four main concerns:
+Science Bowl question-generation workspace focused on:
 
-- ingest textbooks, packet PDFs, and MIT writing data into normalized artifacts
-- retrieve factual textbook chunks and style examples
-- generate and verify draft questions through stable schemas
-- evaluate prompting and future fine-tuning runs against held-out rated data
+- ingesting textbook, question-set, and review data into normalized artifacts
+- retrieving factual textbook chunks and style examples
+- generating and verifying draft questions through stable schemas
+- evaluating prompting and future fine-tuning runs against held-out rated data
 
-The current implementation is structured as a modular Python package under `src/scibowl` with typed schemas, CLI entrypoints, packet normalization/parsing tools, and baseline evaluation plumbing.
+This repo now owns generation, verification, evaluation, and the generated-question review workflow.
+
+Related sibling repos:
+
+- `../scibowl-similarity` for duplicate mining and the duplicate review website
+- `../scibowl-packet-scraper` for packet downloading, filename normalization, and packet PDF parsing
+
+Shared artifacts now live outside the repo in:
+
+- `../data`
 
 Key directories:
 
 - `configs/` for runtime settings
-- `src/scibowl/dedupe/` for duplicate mining, CSV export, and local review
-- `src/scibowl/ingest/` for dataset, textbook, review, and packet ingestion
+- `src/scibowl/ingest/` for textbook, question-set, and review ingestion
 - `src/scibowl/generate/` and `src/scibowl/verify/` for draft production and review
 - `src/scibowl/eval/` for splits and baseline evaluation
-- `data/processed/` and `data/interim/` for normalized artifacts
+- `src/scibowl/generation_review/` for the local generated-question review website
 
 Docs:
 
 - `docs/architecture.md` for the high-level pipeline
-- `docs/duplicate_review.md` for duplicate mining and the local review website
 - `docs/generation_config.md` for config-driven question generation
 - `docs/generated_question_review.md` for reviewing generated baseline questions locally
-- `docs/repo_split_plan.md` for a future plan to split similarity and ingestion into separate repos
 
 Install locally with:
 
