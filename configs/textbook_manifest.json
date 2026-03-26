@@ -1,7 +1,10 @@
 {
   "earth_space": [
     "tarbuck_earth_science",
-    "seeds_foundations_of_astrophysics"
+    "seeds_foundations_of_astrophysics",
+    "ahrens_essentials_of_meteorology",
+    "garrison_essentials_of_oceanography_5e",
+    "burns_practical_observational_astronomy"
   ],
   "physics": [
     "halliday_resnick_krane_volume_1",

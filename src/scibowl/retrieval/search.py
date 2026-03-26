@@ -44,8 +44,17 @@ def _select_textbook_chunks(spec: QuestionSpec, textbook_chunks: list[TextbookCh
     allowed_ids = manifest.get(spec.category.value)
     if spec.category.value == "earth_space":
         subcategory = canonicalize_subcategory(spec.subcategory)
-        if subcategory in EARTH_SPACE_ASTRO_SUBCATEGORIES:
+        if subcategory == "Observation":
+            allowed_ids = ["burns_practical_observational_astronomy"]
+        elif subcategory in EARTH_SPACE_ASTRO_SUBCATEGORIES:
             allowed_ids = ["seeds_foundations_of_astrophysics"]
+        elif subcategory == "Meteorology":
+            allowed_ids = ["ahrens_essentials_of_meteorology"]
+        elif subcategory == "Hydrology":
+            allowed_ids = [
+                "garrison_essentials_of_oceanography_5e",
+                "tarbuck_earth_science",
+            ]
         elif subcategory in EARTH_SPACE_EARTH_SUBCATEGORIES:
             allowed_ids = ["tarbuck_earth_science"]
     if allowed_ids is None:

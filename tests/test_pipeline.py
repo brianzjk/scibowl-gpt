@@ -112,6 +112,36 @@ def test_retrieve_bundle_routes_earth_space_books_by_subcategory() -> None:
             token_count_est=7,
             metadata={},
         ),
+        TextbookChunk(
+            chunk_id="met1",
+            document_id="ahrens_essentials_of_meteorology",
+            title="Essentials of Meteorology",
+            topics=["meteorology"],
+            text="Cold fronts, pressure gradients, humidity, and clouds drive weather patterns in the atmosphere.",
+            char_count=90,
+            token_count_est=14,
+            metadata={},
+        ),
+        TextbookChunk(
+            chunk_id="ocn1",
+            document_id="garrison_essentials_of_oceanography_5e",
+            title="Essentials of Oceanography",
+            topics=["hydrology", "oceanography"],
+            text="Runoff, watersheds, infiltration, and groundwater connect the ocean to the broader water cycle.",
+            char_count=94,
+            token_count_est=14,
+            metadata={},
+        ),
+        TextbookChunk(
+            chunk_id="obs1",
+            document_id="burns_practical_observational_astronomy",
+            title="A Practical Guide to Observational Astronomy",
+            topics=["observation", "astronomy"],
+            text="Horizon coordinates, equatorial coordinates, telescope mounts, detectors, and photometry are central to observational astronomy.",
+            char_count=125,
+            token_count_est=18,
+            metadata={},
+        ),
     ]
 
     astro_spec = QuestionSpec(
@@ -132,12 +162,46 @@ def test_retrieve_bundle_routes_earth_space_books_by_subcategory() -> None:
         difficulty=4,
         topic_focus=["groundwater"],
     )
+    meteo_spec = QuestionSpec(
+        spec_id="spec_meteo",
+        category=Category.EARTH_SPACE,
+        subcategory="Meteorology",
+        question_type=QuestionType.TOSSUP,
+        answer_mode=AnswerMode.SHORT_ANSWER,
+        difficulty=4,
+        topic_focus=["cold fronts"],
+    )
+    observation_spec = QuestionSpec(
+        spec_id="spec_observation",
+        category=Category.EARTH_SPACE,
+        subcategory="Observation",
+        question_type=QuestionType.TOSSUP,
+        answer_mode=AnswerMode.SHORT_ANSWER,
+        difficulty=4,
+        topic_focus=["equatorial coordinates"],
+    )
+    tectonics_spec = QuestionSpec(
+        spec_id="spec_tectonics",
+        category=Category.EARTH_SPACE,
+        subcategory="Tectonics",
+        question_type=QuestionType.TOSSUP,
+        answer_mode=AnswerMode.SHORT_ANSWER,
+        difficulty=4,
+        topic_focus=["plate boundaries"],
+    )
 
     astro_bundle = retrieve_bundle(astro_spec, chunks, [])
     earth_bundle = retrieve_bundle(earth_spec, chunks, [])
+    meteo_bundle = retrieve_bundle(meteo_spec, chunks, [])
+    observation_bundle = retrieve_bundle(observation_spec, chunks, [])
+    tectonics_bundle = retrieve_bundle(tectonics_spec, chunks, [])
 
     assert [chunk.document_id for chunk in astro_bundle.fact_chunks] == ["seeds_foundations_of_astrophysics"]
-    assert [chunk.document_id for chunk in earth_bundle.fact_chunks] == ["tarbuck_earth_science"]
+    assert [chunk.document_id for chunk in earth_bundle.fact_chunks][:1] == ["garrison_essentials_of_oceanography_5e"]
+    assert "tarbuck_earth_science" in [chunk.document_id for chunk in earth_bundle.fact_chunks]
+    assert [chunk.document_id for chunk in meteo_bundle.fact_chunks] == ["ahrens_essentials_of_meteorology"]
+    assert [chunk.document_id for chunk in observation_bundle.fact_chunks] == ["burns_practical_observational_astronomy"]
+    assert [chunk.document_id for chunk in tectonics_bundle.fact_chunks] == ["tarbuck_earth_science"]
 
 
 def test_build_checks_flags_textbook_meta_questions_and_bad_multiple_choice() -> None:
