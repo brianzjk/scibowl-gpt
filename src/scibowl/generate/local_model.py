@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import os
+import re
+import sys
+from typing import Any
 
 from scibowl.llm.client import OpenAICompatibleChatClient
 from scibowl.prompts.renderer import load_template, render_writer_prompt
@@ -48,6 +51,9 @@ class HeuristicWriterModel:
             question_text=question_text,
             answer_text=answer_text,
             choices=choices,
+            citation_chunk_ids=(
+                [bundle.fact_chunks[0].chunk_id] if bundle.fact_chunks else []
+            ),
         )
 
 
@@ -63,17 +69,44 @@ class PromptWriterModel:
 
     def generate(self, spec: QuestionSpec, bundle: RetrievalBundle) -> GeneratedDraft:
         try:
-            payload = self.client.complete_json(
-                system_prompt=load_template("writer_system.txt"),
-                user_prompt=render_writer_prompt(spec, bundle),
-                temperature=float(os.getenv("SCIBOWL_WRITER_TEMPERATURE", "0.2")),
+            last_error: Exception | None = None
+            question_text = ""
+            answer_text = ""
+            choices: list[Choice] = []
+            citation_chunk_ids: list[str] = []
+            retries = max(1, int(os.getenv("SCIBOWL_WRITER_RETRIES", "2")))
+            for attempt in range(1, retries + 1):
+                try:
+                    payload = self.client.complete_json(
+                        system_prompt=load_template("writer_system.txt"),
+                        user_prompt=render_writer_prompt(spec, bundle),
+                        temperature=float(os.getenv("SCIBOWL_WRITER_TEMPERATURE", "0.2")),
+                    )
+                    question_text, answer_text = _extract_writer_fields(payload)
+                    choices = _extract_writer_choices(payload)
+                    citation_chunk_ids = _extract_writer_citation_ids(payload, bundle)
+                    break
+                except Exception as exc:
+                    last_error = exc
+                    if attempt < retries:
+                        print(
+                            f"[writer] Retry {attempt}/{retries - 1} for model {self.model_info.model_name}: {exc}",
+                            file=sys.stderr,
+                            flush=True,
+                        )
+            else:
+                assert last_error is not None
+                raise last_error
+        except Exception as exc:
+            if _writer_fallback_disabled():
+                raise RuntimeError(
+                    f"Writer model {self.model_info.model_name} failed and fallback is disabled: {exc}"
+                ) from exc
+            print(
+                f"[writer] Falling back for model {self.model_info.model_name}: {exc}",
+                file=sys.stderr,
+                flush=True,
             )
-            question_text, answer_text = _extract_writer_fields(payload)
-            choices = [
-                Choice(label=str(choice["label"]).strip(), text=str(choice["text"]).strip())
-                for choice in payload.get("choices", [])
-            ]
-        except Exception:
             return _build_writer_fallback(spec, bundle, self.model_info)
         return build_generated_draft(
             spec=spec,
@@ -82,6 +115,7 @@ class PromptWriterModel:
             question_text=question_text,
             answer_text=answer_text,
             choices=choices,
+            citation_chunk_ids=citation_chunk_ids,
         )
 
 
@@ -93,8 +127,10 @@ def build_generated_draft(
     question_text: str,
     answer_text: str,
     choices: list[Choice],
+    citation_chunk_ids: list[str] | None = None,
 ) -> GeneratedDraft:
     inferred_answer_mode = infer_answer_mode(question_text=question_text, answer_text=answer_text, choices=choices)
+    cited_ids = set(citation_chunk_ids or [])
     citations = [
         Citation(
             source_id=chunk.document_id,
@@ -102,6 +138,7 @@ def build_generated_draft(
             locator=chunk.locator,
         )
         for chunk in bundle.fact_chunks
+        if chunk.chunk_id in cited_ids
     ]
     return GeneratedDraft(
         draft_id=make_id("draft"),
@@ -121,6 +158,22 @@ def build_generated_draft(
     )
 
 
+def _extract_writer_citation_ids(
+    payload: dict[str, object],
+    bundle: RetrievalBundle,
+) -> list[str]:
+    raw_ids = payload.get('citation_chunk_ids')
+    if not isinstance(raw_ids, list):
+        return []
+    available_ids = {chunk.chunk_id for chunk in bundle.fact_chunks}
+    citation_ids: list[str] = []
+    for raw_id in raw_ids:
+        chunk_id = str(raw_id).strip()
+        if chunk_id in available_ids and chunk_id not in citation_ids:
+            citation_ids.append(chunk_id)
+    return citation_ids
+
+
 def _extract_writer_fields(payload: dict[str, object]) -> tuple[str, str]:
     question_text = payload.get("question_text") or payload.get("question")
     answer_text = payload.get("answer_text") or payload.get("answer")
@@ -136,6 +189,51 @@ def _extract_writer_fields(payload: dict[str, object]) -> tuple[str, str]:
         raise RuntimeError(f"Writer response was missing question_text/answer_text. Payload keys: {available_keys}")
 
     return str(question_text).strip(), str(answer_text).strip()
+
+
+def _extract_writer_choices(payload: dict[str, object]) -> list[Choice]:
+    raw_choices = payload.get("choices", [])
+    if raw_choices is None:
+        return []
+    if not isinstance(raw_choices, list):
+        raise RuntimeError(f"Writer response choices were not a list: {type(raw_choices).__name__}")
+
+    return [_coerce_choice(choice, index=index) for index, choice in enumerate(raw_choices)]
+
+
+def _coerce_choice(raw_choice: object, *, index: int) -> Choice:
+    default_label = "WXYZ"[index] if index < 4 else chr(ord("A") + index)
+
+    if isinstance(raw_choice, Choice):
+        return raw_choice
+
+    if isinstance(raw_choice, str):
+        match = re.match(r"^\s*([A-Z])\)\s*(.+?)\s*$", raw_choice)
+        if match:
+            return Choice(label=match.group(1), text=match.group(2).strip())
+        return Choice(label=default_label, text=raw_choice.strip())
+
+    if isinstance(raw_choice, dict):
+        if "label" in raw_choice and "text" in raw_choice:
+            return Choice(label=str(raw_choice["label"]).strip(), text=str(raw_choice["text"]).strip())
+        if "choice_label" in raw_choice and "choice_text" in raw_choice:
+            return Choice(
+                label=str(raw_choice["choice_label"]).strip(),
+                text=str(raw_choice["choice_text"]).strip(),
+            )
+        if len(raw_choice) == 1:
+            label, text = next(iter(raw_choice.items()))
+            label_text = str(label).strip()
+            if len(label_text) == 1 and label_text.isalpha():
+                return Choice(label=label_text.upper(), text=str(text).strip())
+        if "option" in raw_choice or "value" in raw_choice:
+            return Choice(
+                label=str(raw_choice.get("option") or raw_choice.get("label") or default_label).strip(),
+                text=str(raw_choice.get("value") or raw_choice.get("text") or "").strip(),
+            )
+        raise RuntimeError(f"Writer response choice object had unsupported keys: {sorted(str(key) for key in raw_choice)}")
+
+    raise RuntimeError(f"Writer response choice had unsupported type: {type(raw_choice).__name__}")
 
 
 def build_writer_model() -> PromptWriterModel | HeuristicWriterModel:
@@ -178,3 +276,7 @@ def _fallback_answer_mode(spec: QuestionSpec) -> AnswerMode:
     if spec.question_type.value == "bonus":
         return AnswerMode.MULTIPLE_CHOICE
     return AnswerMode.SHORT_ANSWER
+
+
+def _writer_fallback_disabled() -> bool:
+    return os.getenv("SCIBOWL_DISABLE_WRITER_FALLBACK", "").strip().lower() in {"1", "true", "yes", "on"}

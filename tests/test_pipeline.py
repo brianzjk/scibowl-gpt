@@ -197,11 +197,52 @@ def test_retrieve_bundle_routes_earth_space_books_by_subcategory() -> None:
     tectonics_bundle = retrieve_bundle(tectonics_spec, chunks, [])
 
     assert [chunk.document_id for chunk in astro_bundle.fact_chunks] == ["seeds_foundations_of_astrophysics"]
-    assert [chunk.document_id for chunk in earth_bundle.fact_chunks][:1] == ["garrison_essentials_of_oceanography_5e"]
-    assert "tarbuck_earth_science" in [chunk.document_id for chunk in earth_bundle.fact_chunks]
+    assert earth_bundle.fact_chunks[0].document_id == 'garrison_essentials_of_oceanography_5e'
+    assert {chunk.document_id for chunk in earth_bundle.fact_chunks} == {
+        'garrison_essentials_of_oceanography_5e',
+        'tarbuck_earth_science',
+    }
     assert [chunk.document_id for chunk in meteo_bundle.fact_chunks] == ["ahrens_essentials_of_meteorology"]
     assert [chunk.document_id for chunk in observation_bundle.fact_chunks] == ["burns_practical_observational_astronomy"]
-    assert [chunk.document_id for chunk in tectonics_bundle.fact_chunks] == ["tarbuck_earth_science"]
+    assert tectonics_bundle.fact_chunks == []
+
+
+def test_retrieve_bundle_respects_recent_chunk_avoidance() -> None:
+    spec = QuestionSpec(
+        spec_id="spec_recent",
+        category=Category.EARTH_SPACE,
+        subcategory="Observation",
+        question_type=QuestionType.TOSSUP,
+        answer_mode=AnswerMode.SHORT_ANSWER,
+        difficulty=4,
+        topic_focus=["parallax"],
+    )
+    chunks = [
+        TextbookChunk(
+            chunk_id="obs1",
+            document_id="burns_practical_observational_astronomy",
+            title="Observation",
+            topics=["parallax", "detectors"],
+            text="Parallax and detector calibration are central to observation.",
+            char_count=62,
+            token_count_est=9,
+            metadata={},
+        ),
+        TextbookChunk(
+            chunk_id="obs2",
+            document_id="burns_practical_observational_astronomy",
+            title="Observation",
+            topics=["parallax", "seeing"],
+            text="Parallax measurements from the ground are limited by seeing and detector noise.",
+            char_count=78,
+            token_count_est=12,
+            metadata={},
+        ),
+    ]
+
+    bundle = retrieve_bundle(spec, chunks, [], fact_top_k=1, avoid_fact_chunk_ids={"obs2"})
+
+    assert [chunk.chunk_id for chunk in bundle.fact_chunks] == ["obs1"]
 
 
 def test_build_checks_flags_textbook_meta_questions_and_bad_multiple_choice() -> None:

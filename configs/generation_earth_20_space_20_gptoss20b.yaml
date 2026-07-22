@@ -1,0 +1,31 @@
+output_path: ../data/processed/generated/earth_20_space_20_gptoss20b.jsonl
+style_questions_path: ../data/interim/question_sets/style_corpus_all.jsonl
+textbook_chunks_path: ../data/interim/textbooks
+random_seed: 7
+
+jobs:
+  - job_id: earth_gptoss20b_20
+    category: earth_space
+    subcategory_mode: random
+    subcategory_pool:
+      - Hydrology
+      - Meteorology
+      - Rocks and Minerals
+      - Tectonics
+    question_type_mode: random
+    difficulty_mode: random
+    difficulty_pool: [1, 2, 3, 4, 5, 6, 7]
+    count: 20
+
+  - job_id: space_gptoss20b_20
+    category: earth_space
+    subcategory_mode: random
+    subcategory_pool:
+      - Cosmology
+      - Observation
+      - Solar System
+      - Stars
+    question_type_mode: random
+    difficulty_mode: random
+    difficulty_pool: [1, 2, 3, 4, 5, 6, 7]
+    count: 20

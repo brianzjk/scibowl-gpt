@@ -102,4 +102,8 @@ def _extract_json_object(text: str) -> dict[str, Any]:
     if text.startswith("```"):
         lines = [line for line in text.splitlines() if not line.startswith("```")]
         text = "\n".join(lines).strip()
-    return json.loads(text)
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as exc:
+        snippet = text[:500].replace("\n", "\\n")
+        raise RuntimeError(f"Model returned invalid JSON: {exc}. Raw content prefix: {snippet}") from exc

@@ -29,3 +29,19 @@ class HumanReview(BaseModel):
         if not value:
             raise ValueError("reviewer_id must not be empty")
         return value
+
+
+class SourceComment(BaseModel):
+    comment_id: str
+    source_id: str
+    question_id: str | None = None
+    raw_file: str
+    sheet_name: str
+    cell_ref: str
+    source_row: int | None = None
+    author: str | None = None
+    text: str
+    timestamp: datetime | None = None
+    parent_comment_id: str | None = None
+    resolved: bool | None = None
+    comment_kind: str

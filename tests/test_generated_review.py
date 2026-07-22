@@ -116,7 +116,7 @@ def test_run_baseline_eval_writes_detailed_runs(monkeypatch) -> None:
     )
 
     class FakeOrchestrator:
-        def run(self, spec, textbook_chunks, style_questions):
+        def run(self, spec, textbook_chunks, style_questions, **kwargs):
             draft = _build_run_record("draft_fake", candidate_question_id="q1").draft
             report = _build_run_record("draft_fake", candidate_question_id="q1").report
             return RetrievalBundle(spec_id=spec.spec_id), draft, report

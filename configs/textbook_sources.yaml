@@ -1,0 +1,92 @@
+corpus_version: textbook_v2
+max_words: 180
+overlap_words: 30
+sources:
+  - document_id: ahrens_essentials_of_meteorology
+    file: ahrens_essentials_of_meteorology.pdf
+    title: Essentials of Meteorology
+    topics: [earth_space, meteorology, atmosphere]
+    page_count: 463
+    start_page: 2
+    end_page: 444
+    sha256: 2bd8e15d64af9a9f71977f290625dfad31ec28dde837539e4cb5b5011aa0779b
+  - document_id: atkins_general_chemistry
+    file: atkins_general_chemistry.pdf
+    title: General Chemistry
+    topics: [chemistry]
+    page_count: 1129
+    start_page: 27
+    end_page: 1030
+    sha256: f903f5fabe8ea8d0915d24351a3d22036d982ffd1fd3c03cd49d140fa67f91d2
+  - document_id: burns_practical_observational_astronomy
+    file: burns_practical_observational_astronomy.pdf
+    title: A Practical Guide to Observational Astronomy
+    topics: [earth_space, astronomy, observation]
+    page_count: 139
+    start_page: 5
+    end_page: 137
+    sha256: 36ae40b797673b649e5647bbdbcb4ca961b21c1d4dc7c5f05ebc7c8e2c6b68f5
+  - document_id: campbell_biology_12e
+    file: campbell_biology_12e.pdf
+    title: Campbell Biology 12th Edition
+    topics: [biology]
+    page_count: 1493
+    start_page: 51
+    end_page: 1336
+    sha256: 2ae1fc0afd986a14cedb21fa73643487b03aba281612f055e0906c216f6ac8f9
+  - document_id: garrison_essentials_of_oceanography_5e
+    file: garrison_essentials_of_oceanography_5e.pdf
+    title: Essentials of Oceanography 5th Edition
+    topics: [earth_space, hydrology, oceanography]
+    page_count: 463
+    start_page: 29
+    end_page: 435
+    sha256: 4c2915c2a6505ae7812fdaa1176998f95362ced17bbea2b17f68fa234eca79fa
+  - document_id: halliday_resnick_krane_volume_1
+    file: halliday_resnick_krane_volume_1.pdf
+    title: Physics Volume 1
+    topics: [physics]
+    page_count: 627
+    start_page: 17
+    end_page: 607
+    sha256: fab378d9061fba93a3efac5b8e5bbdd113fbf833699424ec9b3041e8ee89397f
+  - document_id: halliday_resnick_krane_volume_2
+    file: halliday_resnick_krane_volume_2.pdf
+    title: Physics Volume 2
+    topics: [physics]
+    page_count: 683
+    start_page: 18
+    end_page: 664
+    sha256: 6323da4bd248b6a0d0759283121e7e8990b79061e3cdd98076677985127e0672
+  - document_id: klein_organic_chemistry_3e
+    file: klein_organic_chemistry_3e.pdf
+    title: Organic Chemistry 3rd Edition
+    topics: [chemistry, organic_chemistry]
+    page_count: 1319
+    start_page: 21
+    end_page: 1276
+    sha256: 195d481a5ecb25fe618981a64482c91be4135bd18f5aaa4ee978f1cdf7371569
+  - document_id: seeds_foundations_of_astrophysics
+    file: seeds_foundations_of_astrophysics.pdf
+    title: Foundations of Astrophysics
+    topics: [earth_space, astronomy]
+    page_count: 674
+    start_page: 17
+    end_page: 640
+    sha256: 8eef5d0903f84f45676322a2953f810470bcad382d8f1f92dcfcec70dd93873f
+  - document_id: tarbuck_earth_science
+    file: tarbuck_earth_science.pdf
+    title: Earth Science
+    topics: [earth_space, geology, hydrology, meteorology]
+    page_count: 817
+    start_page: 31
+    end_page: 797
+    sha256: e8c7e6b6e2c0256753157a9283dba19745f7a13bde0db2fd5485f35bfbf3e8a4
+  - document_id: the_cosmic_onion
+    file: the_cosmic_onion.pdf
+    title: The Cosmic Onion
+    topics: [physics, particle_physics]
+    page_count: 234
+    start_page: 14
+    end_page: 217
+    sha256: 9382499d16990757661a20bb12165776f154af9a0e2b3449094b106d94b0fe94

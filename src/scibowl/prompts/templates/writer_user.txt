@@ -35,7 +35,8 @@ Requirements:
 - Do not include unnecessary flavor text or a throwaway second sentence.
 - Do not put the answer or an obvious near-copy of it in the question stem.
 - Use full-sentence Science Bowl wording.
-- Return valid JSON with exactly these top-level keys: question_text, answer_text, choices.
+- Return valid JSON with exactly these top-level keys: question_text, answer_text, choices, citation_chunk_ids.
+- List only grounding chunk IDs that directly support the question and answer.
 - Choose whether the final question should be short_answer or multiple_choice based on what best fits the concept.
 - Prefer short_answer by default; only use multiple_choice when it materially improves clarity, fairness, or ambiguity control.
 - Keep the answer unambiguous.

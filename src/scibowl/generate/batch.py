@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+from collections import deque
 from pathlib import Path
 from typing import Literal
 
@@ -8,6 +9,7 @@ import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from scibowl.eval.benchmark import build_evaluation_record
+from scibowl.ingest.textbook_corpus import load_textbook_chunks
 from scibowl.generate.orchestration import GenerationOrchestrator
 from scibowl.schema.common import Category, QuestionType
 from scibowl.schema.dataset import GeneratedQuestionRunRecord
@@ -93,6 +95,8 @@ def run_generation_batch(config_path: Path) -> list[GeneratedQuestionRunRecord]:
     textbook_chunks = _load_textbook_chunks(config.textbook_chunks_path)
     orchestrator = GenerationOrchestrator()
     rng = random.Random(config.random_seed)
+    recent_fact_chunk_ids: deque[str] = deque(maxlen=18)
+    recent_style_question_ids: deque[str] = deque(maxlen=18)
 
     records: list[GeneratedQuestionRunRecord] = []
     total_requested = sum(job.count for job in config.jobs)
@@ -118,7 +122,13 @@ def run_generation_batch(config_path: Path) -> list[GeneratedQuestionRunRecord]:
                 forbidden_topics=job.forbidden_topics,
                 style_target_ids=[],
             )
-            bundle, draft, report = orchestrator.run(spec, textbook_chunks, style_questions)
+            bundle, draft, report = orchestrator.run(
+                spec,
+                textbook_chunks,
+                style_questions,
+                avoid_fact_chunk_ids=set(recent_fact_chunk_ids),
+                avoid_style_question_ids=set(recent_style_question_ids),
+            )
             evaluation = build_evaluation_record("generation_batch", draft.draft_id, spec, draft, report)
             record = GeneratedQuestionRunRecord(
                 run_id="generation_batch",
@@ -145,6 +155,8 @@ def run_generation_batch(config_path: Path) -> list[GeneratedQuestionRunRecord]:
             records.append(record)
             with config.output_path.open("a", encoding="utf-8") as handle:
                 handle.write(record.model_dump_json() + "\n")
+            recent_fact_chunk_ids.extend(chunk.chunk_id for chunk in bundle.fact_chunks)
+            recent_style_question_ids.extend(example.question_id for example in bundle.style_examples)
             completed += 1
             print(
                 f"[{completed}/{total_requested}] "
@@ -156,12 +168,7 @@ def run_generation_batch(config_path: Path) -> list[GeneratedQuestionRunRecord]:
 
 
 def _load_textbook_chunks(path: Path) -> list[TextbookChunk]:
-    if path.is_dir():
-        chunks: list[TextbookChunk] = []
-        for jsonl_path in sorted(path.glob("*.jsonl")):
-            chunks.extend(read_jsonl(jsonl_path, TextbookChunk))
-        return chunks
-    return read_jsonl(path, TextbookChunk)
+    return load_textbook_chunks(path)
 
 
 def _default_job_id(job: GenerationJobConfig) -> str:

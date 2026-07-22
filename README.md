@@ -31,6 +31,10 @@ Docs:
 - `docs/architecture.md` for the high-level pipeline
 - `docs/generation_config.md` for config-driven question generation
 - `docs/generated_question_review.md` for reviewing generated baseline questions locally
+- `docs/sft_export.md` for exporting the first supervised fine-tuning dataset
+- `docs/clean_data.md` for the curated MIT and official NSB training export
+- `docs/textbook_retrieval.md` for rebuilding and testing textbook search
+- `docs/lora_training.md` for running the first local LoRA SFT job
 
 Install locally with:
 

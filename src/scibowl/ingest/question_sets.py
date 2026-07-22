@@ -33,6 +33,8 @@ def _normalize_category(value: str) -> Category:
         "earth_science": Category.EARTH_SPACE,
         "earth_and_space": Category.EARTH_SPACE,
         "earth_space": Category.EARTH_SPACE,
+        "ess": Category.EARTH_SPACE,
+        "earth_and_space_science": Category.EARTH_SPACE,
         "space": Category.EARTH_SPACE,
         "math": Category.MATH,
         "energy": Category.ENERGY,
