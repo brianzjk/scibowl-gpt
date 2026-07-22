@@ -9,6 +9,7 @@ import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from scibowl.eval.benchmark import build_evaluation_record
+from scibowl.ingest.textbook_corpus import load_textbook_chunks
 from scibowl.generate.orchestration import GenerationOrchestrator
 from scibowl.schema.common import Category, QuestionType
 from scibowl.schema.dataset import GeneratedQuestionRunRecord
@@ -167,12 +168,7 @@ def run_generation_batch(config_path: Path) -> list[GeneratedQuestionRunRecord]:
 
 
 def _load_textbook_chunks(path: Path) -> list[TextbookChunk]:
-    if path.is_dir():
-        chunks: list[TextbookChunk] = []
-        for jsonl_path in sorted(path.glob("*.jsonl")):
-            chunks.extend(read_jsonl(jsonl_path, TextbookChunk))
-        return chunks
-    return read_jsonl(path, TextbookChunk)
+    return load_textbook_chunks(path)
 
 
 def _default_job_id(job: GenerationJobConfig) -> str:

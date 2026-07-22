@@ -1,6 +1,24 @@
 from __future__ import annotations
 
 import re
+import unicodedata
+
+
+_MOJIBAKE_SEQUENCE = re.compile(r'(?:Ã.|Â.|â..|ï..)')
+
+
+def repair_mojibake(text: str) -> str:
+    """Repair common UTF-8-as-Windows-1252 PDF extraction artifacts."""
+
+    def decode_match(match: re.Match[str]) -> str:
+        value = match.group(0)
+        try:
+            return value.encode('cp1252').decode('utf-8')
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            return value
+
+    repaired = _MOJIBAKE_SEQUENCE.sub(decode_match, text)
+    return unicodedata.normalize('NFKC', repaired)
 
 
 def normalize_whitespace(text: str) -> str:
@@ -21,6 +39,7 @@ def normalize_paragraphs(text: str) -> list[str]:
 
 
 def chunk_text(text: str, max_words: int = 160, overlap_words: int = 30) -> list[str]:
+    _validate_chunk_sizes(max_words, overlap_words)
     words = text.split()
     if not words:
         return []
@@ -37,8 +56,22 @@ def chunk_text(text: str, max_words: int = 160, overlap_words: int = 30) -> list
 
 
 def chunk_paragraphs(paragraphs: list[str], max_words: int = 160, overlap_words: int = 30) -> list[str]:
+    _validate_chunk_sizes(max_words, overlap_words)
     if not paragraphs:
         return []
+
+    bounded_paragraphs: list[str] = []
+    for paragraph in paragraphs:
+        if not paragraph.strip():
+            continue
+        if len(paragraph.split()) <= max_words:
+            bounded_paragraphs.append(paragraph)
+        else:
+            bounded_paragraphs.extend(
+                chunk_text(paragraph, max_words=max_words, overlap_words=overlap_words)
+            )
+
+    paragraphs = bounded_paragraphs
 
     chunks: list[str] = []
     start_index = 0
@@ -69,17 +102,24 @@ def chunk_paragraphs(paragraphs: list[str], max_words: int = 160, overlap_words:
         next_start = end_index
         while next_start > start_index:
             previous_words = len(paragraphs[next_start - 1].split())
-            if overlap + previous_words > overlap_words and next_start < end_index:
+            if overlap + previous_words > overlap_words:
                 break
             overlap += previous_words
             next_start -= 1
             if overlap >= overlap_words:
                 break
-        if next_start == start_index:
-            next_start = min(start_index + 1, len(paragraphs))
-        start_index = next_start
+        start_index = end_index if next_start == start_index else next_start
 
     return chunks
+
+
+def _validate_chunk_sizes(max_words: int, overlap_words: int) -> None:
+    if max_words <= 0:
+        raise ValueError('max_words must be positive')
+    if overlap_words < 0:
+        raise ValueError('overlap_words must not be negative')
+    if overlap_words >= max_words:
+        raise ValueError('overlap_words must be less than max_words')
 
 
 def lexical_overlap_score(query_terms: set[str], text: str) -> float:

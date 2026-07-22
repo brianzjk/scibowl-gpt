@@ -150,6 +150,31 @@ def test_clean_textbook_page_strips_exercises_and_key_terms() -> None:
     assert "Streams may gain water from groundwater inflow." in cleaned
 
 
+def test_clean_textbook_page_drops_interleaved_review_page() -> None:
+    text = (
+        'SUMMARY OF KEY CONCEPTS 5 Chapter Review CONCEPT 5.1 Macromolecules are polymers. '
+        'Levels 1-2: Remembering/Understanding 1. Which molecule is a polymer?'
+    )
+
+    assert _clean_textbook_page(text) == ''
+
+
+def test_clean_textbook_page_keeps_text_after_inline_chapter_contents() -> None:
+    text = (
+        'Overview Vertical Structure Weather and Climate Summary Questions for Review '
+        'Questions for Thought and Exploration Contents '
+        'The atmosphere contains gases that absorb and emit radiation. '
+        'Pressure and density both decrease with altitude through most of the atmosphere. '
+        'Weather describes short-term atmospheric conditions, while climate describes long-term patterns. '
+        'These ideas support the scientific study of storms and circulation.'
+    )
+
+    cleaned = _clean_textbook_page(text)
+
+    assert cleaned.startswith('The atmosphere contains gases')
+    assert 'Questions for Review' not in cleaned
+
+
 def test_chunk_paragraphs_preserves_paragraph_boundaries() -> None:
     text = "\n\n".join(
         [

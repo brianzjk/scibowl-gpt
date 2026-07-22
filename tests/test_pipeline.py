@@ -197,10 +197,14 @@ def test_retrieve_bundle_routes_earth_space_books_by_subcategory() -> None:
     tectonics_bundle = retrieve_bundle(tectonics_spec, chunks, [])
 
     assert [chunk.document_id for chunk in astro_bundle.fact_chunks] == ["seeds_foundations_of_astrophysics"]
-    assert [chunk.document_id for chunk in earth_bundle.fact_chunks] == ["garrison_essentials_of_oceanography_5e"]
+    assert earth_bundle.fact_chunks[0].document_id == 'garrison_essentials_of_oceanography_5e'
+    assert {chunk.document_id for chunk in earth_bundle.fact_chunks} == {
+        'garrison_essentials_of_oceanography_5e',
+        'tarbuck_earth_science',
+    }
     assert [chunk.document_id for chunk in meteo_bundle.fact_chunks] == ["ahrens_essentials_of_meteorology"]
     assert [chunk.document_id for chunk in observation_bundle.fact_chunks] == ["burns_practical_observational_astronomy"]
-    assert [chunk.document_id for chunk in tectonics_bundle.fact_chunks] == ["tarbuck_earth_science"]
+    assert tectonics_bundle.fact_chunks == []
 
 
 def test_retrieve_bundle_respects_recent_chunk_avoidance() -> None:

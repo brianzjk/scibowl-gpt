@@ -24,6 +24,8 @@ Return valid JSON with this exact shape:
 {
   "question_text": "string",
   "answer_text": "ANSWER: string",
-  "choices": [{"label": "W", "text": "string"}]
+  "choices": [{"label": "W", "text": "string"}],
+  "citation_chunk_ids": ["chunk_id_used_for_factual_support"]
 }
 Use an empty choices array for short-answer questions.
+List only grounding chunks that directly support the question and answer. Use an empty citation_chunk_ids array if none do.

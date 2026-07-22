@@ -4,6 +4,7 @@ from collections import Counter
 from pathlib import Path
 
 from scibowl.eval.benchmark import build_evaluation_record
+from scibowl.ingest.textbook_corpus import load_textbook_chunks
 from scibowl.generate.orchestration import GenerationOrchestrator
 from scibowl.schema.dataset import BaselineRunRecord, EvaluationRecord
 from scibowl.schema.generation import QuestionSpec
@@ -116,12 +117,7 @@ def run_baseline_eval(
 
 
 def _load_textbook_chunks(path: Path) -> list[TextbookChunk]:
-    if path.is_dir():
-        chunks: list[TextbookChunk] = []
-        for jsonl_path in sorted(path.glob("*.jsonl")):
-            chunks.extend(read_jsonl(jsonl_path, TextbookChunk))
-        return chunks
-    return read_jsonl(path, TextbookChunk)
+    return load_textbook_chunks(path)
 
 
 def _aggregate_reviews(reviews: list[HumanReview]) -> dict[str, dict[str, float | int | None]]:

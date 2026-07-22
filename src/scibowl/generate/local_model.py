@@ -51,6 +51,9 @@ class HeuristicWriterModel:
             question_text=question_text,
             answer_text=answer_text,
             choices=choices,
+            citation_chunk_ids=(
+                [bundle.fact_chunks[0].chunk_id] if bundle.fact_chunks else []
+            ),
         )
 
 
@@ -70,6 +73,7 @@ class PromptWriterModel:
             question_text = ""
             answer_text = ""
             choices: list[Choice] = []
+            citation_chunk_ids: list[str] = []
             retries = max(1, int(os.getenv("SCIBOWL_WRITER_RETRIES", "2")))
             for attempt in range(1, retries + 1):
                 try:
@@ -80,6 +84,7 @@ class PromptWriterModel:
                     )
                     question_text, answer_text = _extract_writer_fields(payload)
                     choices = _extract_writer_choices(payload)
+                    citation_chunk_ids = _extract_writer_citation_ids(payload, bundle)
                     break
                 except Exception as exc:
                     last_error = exc
@@ -110,6 +115,7 @@ class PromptWriterModel:
             question_text=question_text,
             answer_text=answer_text,
             choices=choices,
+            citation_chunk_ids=citation_chunk_ids,
         )
 
 
@@ -121,8 +127,10 @@ def build_generated_draft(
     question_text: str,
     answer_text: str,
     choices: list[Choice],
+    citation_chunk_ids: list[str] | None = None,
 ) -> GeneratedDraft:
     inferred_answer_mode = infer_answer_mode(question_text=question_text, answer_text=answer_text, choices=choices)
+    cited_ids = set(citation_chunk_ids or [])
     citations = [
         Citation(
             source_id=chunk.document_id,
@@ -130,6 +138,7 @@ def build_generated_draft(
             locator=chunk.locator,
         )
         for chunk in bundle.fact_chunks
+        if chunk.chunk_id in cited_ids
     ]
     return GeneratedDraft(
         draft_id=make_id("draft"),
@@ -147,6 +156,22 @@ def build_generated_draft(
         ),
         citations=citations,
     )
+
+
+def _extract_writer_citation_ids(
+    payload: dict[str, object],
+    bundle: RetrievalBundle,
+) -> list[str]:
+    raw_ids = payload.get('citation_chunk_ids')
+    if not isinstance(raw_ids, list):
+        return []
+    available_ids = {chunk.chunk_id for chunk in bundle.fact_chunks}
+    citation_ids: list[str] = []
+    for raw_id in raw_ids:
+        chunk_id = str(raw_id).strip()
+        if chunk_id in available_ids and chunk_id not in citation_ids:
+            citation_ids.append(chunk_id)
+    return citation_ids
 
 
 def _extract_writer_fields(payload: dict[str, object]) -> tuple[str, str]:

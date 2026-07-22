@@ -10,22 +10,49 @@ from scibowl.generate.batch import run_generation_batch
 from scibowl.generate.orchestration import GenerationOrchestrator
 from scibowl.generation_review.server import run_generated_question_review_server
 from scibowl.ingest.normalize import validate_normalized_questions
+from scibowl.ingest.mit_workbooks import normalize_mit_writing_workbooks
 from scibowl.ingest.question_sets import normalize_mit_question_csv, normalize_mit_writing_directory
 from scibowl.ingest.reviews import import_mit_rating_directory, import_ratings_csv
+from scibowl.ingest.textbook_corpus import ingest_textbook_corpus, load_textbook_chunks
 from scibowl.ingest.textbooks import ingest_textbook_text
 from scibowl.llm.runtime import apply_runtime_model_overrides
 from scibowl.schema.generation import QuestionSpec
 from scibowl.schema.question import NormalizedQuestion
 from scibowl.schema.textbook import TextbookChunk
-from scibowl.training import export_sft_dataset
+from scibowl.training import CLEAN_SFT_PROFILES, build_clean_sft_dataset, export_sft_dataset
 from scibowl.training.lora import train_lora_from_config
 from scibowl.utils.io import read_json, read_jsonl, write_json, write_jsonl
 
 
 def cmd_ingest_textbook(args: argparse.Namespace) -> None:
-    chunks = ingest_textbook_text(Path(args.input_path), document_id=args.document_id, title=args.title)
+    chunks = ingest_textbook_text(
+        Path(args.input_path),
+        document_id=args.document_id,
+        title=args.title,
+        topics=args.topic,
+        start_page=args.start_page,
+        end_page=args.end_page,
+        max_words=args.max_words,
+        overlap_words=args.overlap_words,
+        corpus_version=args.corpus_version,
+        expected_sha256=args.expected_sha256,
+        expected_page_count=args.expected_page_count,
+    )
     write_jsonl(Path(args.output_path), chunks)
     print(f"Wrote {len(chunks)} textbook chunks to {args.output_path}")
+
+
+def cmd_ingest_textbook_corpus(args: argparse.Namespace) -> None:
+    summary = ingest_textbook_corpus(
+        Path(args.manifest),
+        Path(args.raw_dir),
+        Path(args.output_dir),
+    )
+    total_chunks = summary['total_chunks']
+    source_count = summary['source_count']
+    print(
+        f'Wrote {total_chunks} chunks from {source_count} textbooks to {args.output_dir}'
+    )
 
 
 def cmd_validate_questions(args: argparse.Namespace) -> None:
@@ -43,6 +70,39 @@ def cmd_normalize_mit_writing_dir(args: argparse.Namespace) -> None:
     rows = normalize_mit_writing_directory(Path(args.input_dir), source_id=args.source_id)
     write_jsonl(Path(args.output_path), rows)
     print(f"Wrote {len(rows)} normalized MIT writing-sheet questions to {args.output_path}")
+
+
+def cmd_normalize_mit_writing_xlsx_dir(args: argparse.Namespace) -> None:
+    output_path = Path(args.output_path)
+    reviews_output = (
+        Path(args.reviews_output)
+        if args.reviews_output
+        else output_path.with_name(f'{output_path.stem}_reviews.jsonl')
+    )
+    comments_output = (
+        Path(args.comments_output)
+        if args.comments_output
+        else output_path.with_name(f'{output_path.stem}_comments.jsonl')
+    )
+    manifest_output = (
+        Path(args.manifest_output)
+        if args.manifest_output
+        else output_path.with_name(f'{output_path.stem}_manifest.json')
+    )
+    imported = normalize_mit_writing_workbooks(
+        Path(args.input_dir),
+        source_id=args.source_id,
+        tournament=args.tournament,
+        year=args.year,
+    )
+    write_jsonl(output_path, imported.questions)
+    write_jsonl(reviews_output, imported.reviews)
+    write_jsonl(comments_output, imported.comments)
+    write_json(manifest_output, imported.summary)
+    print(
+        f'Wrote {len(imported.questions)} questions, {len(imported.reviews)} ratings, '
+        f'and {len(imported.comments)} source comments'
+    )
 
 
 def cmd_import_ratings_csv(args: argparse.Namespace) -> None:
@@ -116,12 +176,7 @@ def cmd_demo_generate(args: argparse.Namespace) -> None:
 
 
 def _load_textbook_chunks_arg(path: Path) -> list[TextbookChunk]:
-    if path.is_dir():
-        chunks: list[TextbookChunk] = []
-        for jsonl_path in sorted(path.glob("*.jsonl")):
-            chunks.extend(read_jsonl(jsonl_path, TextbookChunk))
-        return chunks
-    return read_jsonl(path, TextbookChunk)
+    return load_textbook_chunks(path)
 
 
 def cmd_review_generated_questions(args: argparse.Namespace) -> None:
@@ -163,6 +218,32 @@ def cmd_train_lora_sft(args: argparse.Namespace) -> None:
     train_lora_from_config(Path(args.config_path))
 
 
+def cmd_build_clean_sft_dataset(args: argparse.Namespace) -> None:
+    summary = build_clean_sft_dataset(
+        questions_path=tuple(Path(value) for value in args.questions),
+        output_dir=Path(args.output_dir),
+        review_paths=tuple(Path(value) for value in args.review),
+        profile=args.profile,
+        validation_fraction=args.validation_fraction,
+        test_fraction=args.test_fraction,
+        seed=args.seed,
+        held_out_question_ids_path=(
+            Path(args.held_out_question_ids) if args.held_out_question_ids else None
+        ),
+        minimum_writing_quality=args.minimum_writing_quality,
+        include_unrated_writing=args.include_unrated_writing,
+    )
+    counts = summary['split_counts']
+    train_count = counts['train']
+    val_count = counts['val']
+    test_count = counts['test']
+    held_out_count = counts['held_out']
+    print(
+        f'Built clean SFT dataset (train={train_count}, val={val_count}, '
+        f'test={test_count}, held_out={held_out_count})'
+    )
+
+
 def _add_model_override_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--ollama-model")
     parser.add_argument("--ollama-base-url", default="http://127.0.0.1:11434/v1")
@@ -198,7 +279,21 @@ def build_parser() -> argparse.ArgumentParser:
     ingest_textbook.add_argument("output_path")
     ingest_textbook.add_argument("--document-id")
     ingest_textbook.add_argument("--title")
+    ingest_textbook.add_argument('--topic', action='append', default=[])
+    ingest_textbook.add_argument('--start-page', type=int)
+    ingest_textbook.add_argument('--end-page', type=int)
+    ingest_textbook.add_argument('--max-words', type=int, default=180)
+    ingest_textbook.add_argument('--overlap-words', type=int, default=30)
+    ingest_textbook.add_argument('--corpus-version', default='textbook_v2')
+    ingest_textbook.add_argument('--expected-sha256')
+    ingest_textbook.add_argument('--expected-page-count', type=int)
     ingest_textbook.set_defaults(func=cmd_ingest_textbook)
+
+    ingest_corpus = subparsers.add_parser('ingest-textbook-corpus')
+    ingest_corpus.add_argument('--manifest', default='configs/textbook_sources.yaml')
+    ingest_corpus.add_argument('--raw-dir', default='../data/raw/textbooks')
+    ingest_corpus.add_argument('--output-dir', default='../data/interim/textbooks_v2')
+    ingest_corpus.set_defaults(func=cmd_ingest_textbook_corpus)
 
     validate_questions = subparsers.add_parser("validate-questions")
     validate_questions.add_argument("input_path")
@@ -215,6 +310,17 @@ def build_parser() -> argparse.ArgumentParser:
     normalize_mit_writing_dir.add_argument("output_path")
     normalize_mit_writing_dir.add_argument("--source-id", default="mit_2025")
     normalize_mit_writing_dir.set_defaults(func=cmd_normalize_mit_writing_dir)
+
+    normalize_mit_xlsx_dir = subparsers.add_parser('normalize-mit-writing-xlsx-dir')
+    normalize_mit_xlsx_dir.add_argument('input_dir')
+    normalize_mit_xlsx_dir.add_argument('output_path')
+    normalize_mit_xlsx_dir.add_argument('--reviews-output')
+    normalize_mit_xlsx_dir.add_argument('--comments-output')
+    normalize_mit_xlsx_dir.add_argument('--manifest-output')
+    normalize_mit_xlsx_dir.add_argument('--source-id', default='mit_2026')
+    normalize_mit_xlsx_dir.add_argument('--tournament', default='MIT Science Bowl 2026')
+    normalize_mit_xlsx_dir.add_argument('--year', type=int, default=2026)
+    normalize_mit_xlsx_dir.set_defaults(func=cmd_normalize_mit_writing_xlsx_dir)
 
     import_ratings_csv = subparsers.add_parser("import-ratings-csv")
     import_ratings_csv.add_argument("input_path")
@@ -282,6 +388,19 @@ def build_parser() -> argparse.ArgumentParser:
     export_sft_cmd.add_argument("--seed", type=int, default=42)
     export_sft_cmd.add_argument("--exclude-category", action="append", default=["energy"])
     export_sft_cmd.set_defaults(func=cmd_export_sft_dataset)
+
+    clean_sft_cmd = subparsers.add_parser('build-clean-sft-dataset')
+    clean_sft_cmd.add_argument('--questions', action='append', required=True)
+    clean_sft_cmd.add_argument('--output-dir', required=True)
+    clean_sft_cmd.add_argument('--review', action='append', default=[])
+    clean_sft_cmd.add_argument('--profile', choices=CLEAN_SFT_PROFILES, default='mit_recent_plus_nsb')
+    clean_sft_cmd.add_argument('--validation-fraction', type=float, default=0.05)
+    clean_sft_cmd.add_argument('--test-fraction', type=float, default=0.05)
+    clean_sft_cmd.add_argument('--seed', type=int, default=42)
+    clean_sft_cmd.add_argument('--held-out-question-ids')
+    clean_sft_cmd.add_argument('--minimum-writing-quality', type=float, default=0.0)
+    clean_sft_cmd.add_argument('--include-unrated-writing', action='store_true')
+    clean_sft_cmd.set_defaults(func=cmd_build_clean_sft_dataset)
 
     train_lora_cmd = subparsers.add_parser("train-lora-sft")
     train_lora_cmd.add_argument("config_path")

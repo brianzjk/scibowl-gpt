@@ -1,5 +1,7 @@
 # SFT Export
 
+> Legacy baseline only. Do not use this export for a new Inkling or comparison run. It carries guessed difficulty and subcategory values, arbitrary source weights, and per-ID splits that can leak near copies. Use `docs/clean_data.md` and `build-clean-sft-dataset` instead.
+
 The first SFT dataset in `scibowl-gpt` is meant to teach:
 
 - Science Bowl formatting

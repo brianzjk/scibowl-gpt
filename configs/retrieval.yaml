@@ -1,3 +1,6 @@
 fact_top_k: 3
 style_top_k: 3
-minimum_overlap_score: 0.0
+minimum_fact_score: 0.05
+preferred_document_boost: 0.2
+fact_diversity_penalty: 0.25
+style_diversity_penalty: 0.25
