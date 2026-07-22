@@ -21,6 +21,24 @@ For the current Ollama baseline, the main review corpus is:
   - `../data/processed/eval/baseline_ollama_gptoss20b/test_baseline_runs.jsonl`
   - `189` questions total
 
+You can also run future baselines directly against Ollama `qwen3.5:9b` without manual env vars:
+
+```powershell
+.venv\Scripts\python.exe -m scibowl.cli.main run-baseline-eval `
+  --split ..\data\processed\splits\mit_2025_rated_v1.json `
+  --split-name test `
+  --output-dir ..\data\processed\eval\baseline_ollama_qwen35_9b `
+  --questions ..\data\processed\question_sets\mit_2025.jsonl `
+  --style-questions ..\data\interim\question_sets\style_corpus_all.jsonl `
+  --reviews ..\data\processed\reviews\mit_2025.jsonl `
+  --textbook-chunks ..\data\interim\textbooks `
+  --max-per-category 5 `
+  --ollama-model qwen3.5:latest `
+  --writer-timeout-seconds 600 `
+  --verifier-timeout-seconds 300 `
+  --disable-writer-fallback
+```
+
 ## Run The Review Website
 
 From the repo root:

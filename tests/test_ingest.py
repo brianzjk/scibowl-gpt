@@ -1,10 +1,11 @@
 import shutil
 from pathlib import Path
 
-from scibowl.ingest.textbooks import _trim_pages_after_contents, _trim_pages_before_back_matter
+from scibowl.ingest.textbooks import _clean_textbook_page, _trim_pages_after_contents, _trim_pages_before_back_matter
 from scibowl.ingest.question_sets import normalize_mit_question_csv
 from scibowl.ingest.reviews import import_ratings_csv
 from scibowl.utils.ids import make_id
+from scibowl.utils.text import chunk_paragraphs, normalize_paragraphs
 
 
 def _make_temp_dir() -> Path:
@@ -125,3 +126,42 @@ def test_trim_pages_before_back_matter_skips_glossary_and_index() -> None:
     assert trimmed_pages[-1].startswith("Chapter 11")
     assert metadata["back_matter_trimmed"] is True
     assert metadata["back_matter_start_page"] == 3
+
+
+def test_clean_textbook_page_strips_exercises_and_key_terms() -> None:
+    page = "\n".join(
+        [
+            "CHAPTER 17 | GROUNDWATER",
+            "Groundwater flows through permeable sediments.",
+            "Q Examine this cross section and label the aquifer.",
+            "Key Terms porosity permeability aquifer aquitard",
+            "Problem 3.1 The luminosity of Vega is ...",
+            "",
+            "Streams may gain water from groundwater inflow.",
+        ]
+    )
+
+    cleaned = _clean_textbook_page(page)
+
+    assert "label the aquifer" not in cleaned
+    assert "Key Terms" not in cleaned
+    assert "Problem 3.1" not in cleaned
+    assert "Groundwater flows through permeable sediments." in cleaned
+    assert "Streams may gain water from groundwater inflow." in cleaned
+
+
+def test_chunk_paragraphs_preserves_paragraph_boundaries() -> None:
+    text = "\n\n".join(
+        [
+            "Paragraph one explains aquifers and permeability in groundwater flow.",
+            "Paragraph two explains gaining streams and losing streams in a watershed.",
+            "Paragraph three explains porosity and specific yield.",
+        ]
+    )
+
+    paragraphs = normalize_paragraphs(text)
+    chunks = chunk_paragraphs(paragraphs, max_words=14, overlap_words=4)
+
+    assert len(chunks) >= 2
+    assert "Paragraph one explains aquifers" in chunks[0]
+    assert "Paragraph two explains gaining streams" in chunks[1] or "Paragraph three explains" in chunks[1]

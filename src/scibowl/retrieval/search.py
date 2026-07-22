@@ -51,10 +51,7 @@ def _select_textbook_chunks(spec: QuestionSpec, textbook_chunks: list[TextbookCh
         elif subcategory == "Meteorology":
             allowed_ids = ["ahrens_essentials_of_meteorology"]
         elif subcategory == "Hydrology":
-            allowed_ids = [
-                "garrison_essentials_of_oceanography_5e",
-                "tarbuck_earth_science",
-            ]
+            allowed_ids = ["garrison_essentials_of_oceanography_5e"]
         elif subcategory in EARTH_SPACE_EARTH_SUBCATEGORIES:
             allowed_ids = ["tarbuck_earth_science"]
     if allowed_ids is None:
@@ -70,16 +67,21 @@ def retrieve_bundle(
     style_questions: list[NormalizedQuestion],
     fact_top_k: int = 3,
     style_top_k: int = 3,
+    avoid_fact_chunk_ids: set[str] | None = None,
+    avoid_style_question_ids: set[str] | None = None,
 ) -> RetrievalBundle:
     query_terms = _query_terms(spec)
     relevant_chunks = _select_textbook_chunks(spec, textbook_chunks)
+    avoided_fact_ids = avoid_fact_chunk_ids or set()
+    avoided_style_ids = avoid_style_question_ids or set()
 
     fact_candidates = sorted(
         relevant_chunks,
         key=lambda chunk: _bundle_rank_score(
             spec.spec_id,
             chunk.chunk_id,
-            lexical_overlap_score(query_terms, f"{chunk.title} {' '.join(chunk.topics)} {chunk.text}"),
+            lexical_overlap_score(query_terms, f"{chunk.title} {' '.join(chunk.topics)} {chunk.text}")
+            - (0.8 if chunk.chunk_id in avoided_fact_ids else 0.0),
         ),
         reverse=True,
     )[: max(fact_top_k * 8, 12)]
@@ -96,7 +98,9 @@ def retrieve_bundle(
     style_hits = [
         question
         for question in style_questions
-        if question.category == spec.category and question.question_type == spec.question_type
+        if question.category == spec.category
+        and question.question_type == spec.question_type
+        and question.question_id not in avoided_style_ids
     ]
     style_candidates = sorted(
         style_hits,

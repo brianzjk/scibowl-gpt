@@ -23,8 +23,17 @@ class GenerationOrchestrator:
         spec: QuestionSpec,
         textbook_chunks: list[TextbookChunk],
         style_questions: list[NormalizedQuestion],
+        *,
+        avoid_fact_chunk_ids: set[str] | None = None,
+        avoid_style_question_ids: set[str] | None = None,
     ) -> tuple[RetrievalBundle, GeneratedDraft, VerifierReport]:
-        bundle = retrieve_bundle(spec, textbook_chunks, style_questions)
+        bundle = retrieve_bundle(
+            spec,
+            textbook_chunks,
+            style_questions,
+            avoid_fact_chunk_ids=avoid_fact_chunk_ids,
+            avoid_style_question_ids=avoid_style_question_ids,
+        )
         draft = self.writer.write(spec, bundle)
         report = self.verifier.verify(spec, draft, bundle, style_questions)
         return bundle, draft, report

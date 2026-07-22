@@ -12,6 +12,17 @@ You can run it either through the helper script:
 .venv\Scripts\python.exe scripts\generate_questions.py configs\generation_job.example.yaml
 ```
 
+or point it directly at Ollama `qwen3.5:9b`:
+
+```powershell
+.venv\Scripts\python.exe scripts\generate_questions.py `
+  configs\generation_job.example.yaml `
+  --ollama-model qwen3.5:latest `
+  --writer-timeout-seconds 600 `
+  --verifier-timeout-seconds 300 `
+  --disable-writer-fallback
+```
+
 or through the CLI:
 
 ```powershell
@@ -83,5 +94,8 @@ jobs:
   - `math`: `Algebra`, `Calculus`, `Combinatorics`, `Geometry`, `Number Theory`
 - The random pools intentionally exclude broad/noisy labels like `other` and `Random`.
 - The generator uses textbooks as factual reference material and style examples only for tone/format.
+- `--ollama-model qwen3.5:latest` is the quickest way to run generation against a local Ollama model without manually exporting writer/verifier env vars.
+- For slower local models, `--writer-timeout-seconds 600` is a safer starting point than the default 120-second writer timeout.
+- `--disable-writer-fallback` is useful when you want generation to fail loudly instead of silently substituting heuristic fallback outputs.
 - The review website shows only the generated question and verifier output; it does not compare against a held-out reference question.
 - After the repo split, the recommended convention is to keep generated artifacts under `../data` rather than inside the repo.

@@ -13,6 +13,7 @@ from .generation import (
 from .question import AcceptedQuestion, AnswerGuidance, Choice, NormalizedQuestion
 from .review import HumanReview, ReviewRatings
 from .textbook import TextbookChunk
+from .training import ChatMessage, SFTExample, SFTMetadata
 from .verification import VerifierReport
 
 __all__ = [
@@ -39,6 +40,9 @@ __all__ = [
     "RetrievedFactChunk",
     "RetrievedStyleExample",
     "ReviewRatings",
+    "SFTExample",
+    "SFTMetadata",
+    "ChatMessage",
     "SourceType",
     "TextbookChunk",
     "TrainingExample",

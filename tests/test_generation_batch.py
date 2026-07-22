@@ -105,7 +105,7 @@ def test_run_generation_batch_writes_records(monkeypatch) -> None:
     )
 
     class FakeOrchestrator:
-        def run(self, spec, textbook_chunks, style_questions):
+        def run(self, spec, textbook_chunks, style_questions, **kwargs):
             draft = GeneratedDraft(
                 draft_id="draft_1",
                 spec_id=spec.spec_id,
@@ -186,7 +186,7 @@ def test_run_generation_batch_supports_random_subcategory_mode(monkeypatch) -> N
     )
 
     class FakeOrchestrator:
-        def run(self, spec, textbook_chunks, style_questions):
+        def run(self, spec, textbook_chunks, style_questions, **kwargs):
             draft = GeneratedDraft(
                 draft_id=f"draft_{spec.subcategory}",
                 spec_id=spec.spec_id,
@@ -265,7 +265,7 @@ def test_run_generation_batch_supports_random_question_shape_and_difficulty(monk
     )
 
     class FakeOrchestrator:
-        def run(self, spec, textbook_chunks, style_questions):
+        def run(self, spec, textbook_chunks, style_questions, **kwargs):
             inferred_mode = AnswerMode.MULTIPLE_CHOICE if spec.question_type == QuestionType.BONUS else AnswerMode.SHORT_ANSWER
             draft = GeneratedDraft(
                 draft_id=f"draft_{spec.subcategory}_{spec.question_type.value}_{inferred_mode.value}_{spec.difficulty}",

@@ -13,9 +13,12 @@ from scibowl.ingest.normalize import validate_normalized_questions
 from scibowl.ingest.question_sets import normalize_mit_question_csv, normalize_mit_writing_directory
 from scibowl.ingest.reviews import import_mit_rating_directory, import_ratings_csv
 from scibowl.ingest.textbooks import ingest_textbook_text
+from scibowl.llm.runtime import apply_runtime_model_overrides
 from scibowl.schema.generation import QuestionSpec
 from scibowl.schema.question import NormalizedQuestion
 from scibowl.schema.textbook import TextbookChunk
+from scibowl.training import export_sft_dataset
+from scibowl.training.lora import train_lora_from_config
 from scibowl.utils.io import read_json, read_jsonl, write_json, write_jsonl
 
 
@@ -78,6 +81,7 @@ def cmd_build_rated_split(args: argparse.Namespace) -> None:
 
 
 def cmd_run_baseline_eval(args: argparse.Namespace) -> None:
+    _apply_model_override_args(args)
     records = run_baseline_eval(
         split_path=Path(args.split),
         split_name=args.split_name,
@@ -94,6 +98,7 @@ def cmd_run_baseline_eval(args: argparse.Namespace) -> None:
 
 
 def cmd_demo_generate(args: argparse.Namespace) -> None:
+    _apply_model_override_args(args)
     spec = QuestionSpec.model_validate(read_json(Path(args.spec)))
     textbook_chunks = _load_textbook_chunks_arg(Path(args.textbook_chunks))
     style_questions = read_jsonl(Path(args.style_questions), NormalizedQuestion)
@@ -134,8 +139,54 @@ def cmd_review_generated_questions(args: argparse.Namespace) -> None:
 
 
 def cmd_generate_from_config(args: argparse.Namespace) -> None:
+    _apply_model_override_args(args)
     records = run_generation_batch(Path(args.config_path))
     print(f"Wrote {len(records)} generated question runs from {args.config_path}")
+
+
+def cmd_export_sft_dataset(args: argparse.Namespace) -> None:
+    summary = export_sft_dataset(
+        questions_path=Path(args.questions),
+        output_dir=Path(args.output_dir),
+        validation_fraction=args.validation_fraction,
+        seed=args.seed,
+        excluded_categories=tuple(args.exclude_category),
+    )
+    print(
+        "Exported SFT dataset "
+        f"(unique={summary['unique_questions']}, train={summary['split_counts']['train']}, "
+        f"val={summary['split_counts']['val']}, materialized_train={summary['materialized_train_count']})"
+    )
+
+
+def cmd_train_lora_sft(args: argparse.Namespace) -> None:
+    train_lora_from_config(Path(args.config_path))
+
+
+def _add_model_override_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--ollama-model")
+    parser.add_argument("--ollama-base-url", default="http://127.0.0.1:11434/v1")
+    parser.add_argument("--writer-model")
+    parser.add_argument("--writer-base-url")
+    parser.add_argument("--verifier-model")
+    parser.add_argument("--verifier-base-url")
+    parser.add_argument("--writer-timeout-seconds", type=int)
+    parser.add_argument("--verifier-timeout-seconds", type=int)
+    parser.add_argument("--disable-writer-fallback", action="store_true")
+
+
+def _apply_model_override_args(args: argparse.Namespace) -> None:
+    apply_runtime_model_overrides(
+        ollama_model=getattr(args, "ollama_model", None),
+        ollama_base_url=getattr(args, "ollama_base_url", None),
+        writer_model=getattr(args, "writer_model", None),
+        writer_base_url=getattr(args, "writer_base_url", None),
+        verifier_model=getattr(args, "verifier_model", None),
+        verifier_base_url=getattr(args, "verifier_base_url", None),
+        writer_timeout_seconds=getattr(args, "writer_timeout_seconds", None),
+        verifier_timeout_seconds=getattr(args, "verifier_timeout_seconds", None),
+        disable_writer_fallback=getattr(args, "disable_writer_fallback", False),
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -199,6 +250,7 @@ def build_parser() -> argparse.ArgumentParser:
     run_baseline_eval_cmd.add_argument("--max-items", type=int)
     run_baseline_eval_cmd.add_argument("--max-per-category", type=int)
     run_baseline_eval_cmd.add_argument("--exclude-category", action="append", default=["energy"])
+    _add_model_override_args(run_baseline_eval_cmd)
     run_baseline_eval_cmd.set_defaults(func=cmd_run_baseline_eval)
 
     demo_generate = subparsers.add_parser("demo-generate")
@@ -206,6 +258,7 @@ def build_parser() -> argparse.ArgumentParser:
     demo_generate.add_argument("--textbook-chunks", required=True)
     demo_generate.add_argument("--style-questions", required=True)
     demo_generate.add_argument("--output-dir", required=True)
+    _add_model_override_args(demo_generate)
     demo_generate.set_defaults(func=cmd_demo_generate)
 
     review_generated_cmd = subparsers.add_parser("review-generated-questions")
@@ -219,7 +272,20 @@ def build_parser() -> argparse.ArgumentParser:
 
     generate_from_config_cmd = subparsers.add_parser("generate-from-config")
     generate_from_config_cmd.add_argument("config_path")
+    _add_model_override_args(generate_from_config_cmd)
     generate_from_config_cmd.set_defaults(func=cmd_generate_from_config)
+
+    export_sft_cmd = subparsers.add_parser("export-sft-dataset")
+    export_sft_cmd.add_argument("--questions", required=True)
+    export_sft_cmd.add_argument("--output-dir", required=True)
+    export_sft_cmd.add_argument("--validation-fraction", type=float, default=0.05)
+    export_sft_cmd.add_argument("--seed", type=int, default=42)
+    export_sft_cmd.add_argument("--exclude-category", action="append", default=["energy"])
+    export_sft_cmd.set_defaults(func=cmd_export_sft_dataset)
+
+    train_lora_cmd = subparsers.add_parser("train-lora-sft")
+    train_lora_cmd.add_argument("config_path")
+    train_lora_cmd.set_defaults(func=cmd_train_lora_sft)
 
     return parser
 
