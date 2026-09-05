@@ -22,7 +22,6 @@ CLEAN_SFT_PROFILES = (
     'mit_all',
     'mit_recent_plus_nsb',
     'mit_all_plus_nsb',
-    'all_sources',
 )
 
 _UNKNOWN_SUBCATEGORIES = {'', 'other', 'unknown', 'unspecified', 'none'}
@@ -172,7 +171,7 @@ def build_clean_sft_dataset(
         labeled_subcategory_count += int(candidate.subcategory is not None)
         labeled_quality_count += int(candidate.quality_mean is not None)
 
-    write_jsonl(output_dir / 'clean_sft_all.jsonl', examples)
+    (output_dir / 'clean_sft_all.jsonl').unlink(missing_ok=True)
     for split in split_counts:
         write_jsonl(
             output_dir / f'clean_sft_{split}.jsonl',
@@ -368,15 +367,12 @@ def _is_writing_source(
 
 def _profile_includes(profile: str, family: str, year: int | None) -> bool:
     recent_mit = family == 'mit' and year is not None and year >= 2024
-    if profile == 'mit_recent':
-        return recent_mit
-    if profile == 'mit_all':
-        return family == 'mit'
-    if profile == 'mit_recent_plus_nsb':
-        return recent_mit or family == 'official_nsb'
-    if profile == 'mit_all_plus_nsb':
-        return family in {'mit', 'official_nsb'}
-    return True
+    return {
+        'mit_recent': recent_mit,
+        'mit_all': family == 'mit',
+        'mit_recent_plus_nsb': recent_mit or family == 'official_nsb',
+        'mit_all_plus_nsb': family in {'mit', 'official_nsb'},
+    }[profile]
 
 
 def _gate_reason(question: NormalizedQuestion) -> str | None:

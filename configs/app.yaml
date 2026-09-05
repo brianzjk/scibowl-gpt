@@ -1,4 +1,0 @@
-project_name: scibowl-gpt
-default_data_dir: data
-default_output_dir: data/processed
-timezone: America/New_York

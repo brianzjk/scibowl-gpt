@@ -5,9 +5,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from threading import Lock
 
-from pydantic import ValidationError
-
-from scibowl.schema.dataset import BaselineRunRecord, EvaluationRecord, GeneratedQuestionRunRecord
+from scibowl.schema.dataset import GeneratedQuestionRunRecord
 from scibowl.schema.generation import GeneratedDraft, QuestionSpec
 from scibowl.schema.review import HumanReview, ReviewRatings
 from scibowl.schema.verification import VerifierReport
@@ -25,7 +23,6 @@ class ReviewableRun:
     spec: QuestionSpec
     draft: GeneratedDraft
     report: VerifierReport
-    evaluation: EvaluationRecord
     metadata: dict[str, object] = field(default_factory=dict)
 
 
@@ -97,7 +94,6 @@ class GeneratedQuestionReviewStore:
             "spec": run.spec.model_dump(mode="json"),
             "draft": run.draft.model_dump(mode="json"),
             "report": run.report.model_dump(mode="json"),
-            "evaluation": run.evaluation.model_dump(mode="json"),
             "display_scores": _build_display_scores(run.report),
             "metadata": run.metadata,
             "review": review.model_dump(mode="json") if review else None,
@@ -181,36 +177,19 @@ def _load_reviewable_runs(path: Path) -> list[ReviewableRun]:
 
 
 def _parse_reviewable_run(line: str) -> ReviewableRun:
-    try:
-        run = GeneratedQuestionRunRecord.model_validate_json(line)
-        return ReviewableRun(
-            draft_id=run.draft.draft_id,
-            candidate_question_id=None,
-            spec=run.spec,
-            draft=run.draft,
-            report=run.report,
-            evaluation=run.evaluation,
-            metadata={
-                **run.metadata,
-                "job_id": run.job_id,
-                "source_label": run.job_id,
-            },
-        )
-    except ValidationError:
-        baseline = BaselineRunRecord.model_validate_json(line)
-        return ReviewableRun(
-            draft_id=baseline.draft.draft_id,
-            candidate_question_id=baseline.candidate_question_id,
-            spec=baseline.spec,
-            draft=baseline.draft,
-            report=baseline.report,
-            evaluation=baseline.evaluation,
-            metadata={
-                "source_label": baseline.reference_question.source_metadata.tournament or baseline.reference_question.source_id,
-                "tournament": baseline.reference_question.source_metadata.tournament or baseline.reference_question.source_id,
-                "reference_question_id": baseline.reference_question.question_id,
-            },
-        )
+    run = GeneratedQuestionRunRecord.model_validate_json(line)
+    return ReviewableRun(
+        draft_id=run.draft.draft_id,
+        candidate_question_id=None,
+        spec=run.spec,
+        draft=run.draft,
+        report=run.report,
+        metadata={
+            **run.metadata,
+            "job_id": run.job_id,
+            "source_label": run.job_id,
+        },
+    )
 
 
 def _normalize_verifier_scores(payload: dict[str, float | None] | None) -> dict[str, float | None]:

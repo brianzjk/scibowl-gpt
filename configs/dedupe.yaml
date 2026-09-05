@@ -1,5 +1,0 @@
-model_name: mixedbread-ai/mxbai-embed-large-v1
-threshold: 0.5
-top_k: 10
-batch_size: 32
-include_answer: true

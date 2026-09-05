@@ -48,6 +48,8 @@ def test_clean_curation_uses_human_labels_and_keeps_nsb_labels_unknown() -> None
     questions_path = tmp_path / 'questions.jsonl'
     reviews_path = tmp_path / 'reviews.jsonl'
     output_dir = tmp_path / 'out'
+    output_dir.mkdir()
+    (output_dir / 'clean_sft_all.jsonl').write_text('stale combined data', encoding='utf-8')
     questions = [
         _question(
             'mit_2025_1',
@@ -115,7 +117,8 @@ def test_clean_curation_uses_human_labels_and_keeps_nsb_labels_unknown() -> None
         validation_fraction=0,
         test_fraction=0,
     )
-    examples = read_jsonl(output_dir / 'clean_sft_all.jsonl', CleanSFTExample)
+    examples = read_jsonl(output_dir / 'clean_sft_train.jsonl', CleanSFTExample)
+    assert not (output_dir / 'clean_sft_all.jsonl').exists()
     by_id = {example.metadata.source_question_id: example for example in examples}
 
     mit = by_id['mit_2025_1']
@@ -177,7 +180,7 @@ def test_clean_curation_quarantines_a_whole_near_duplicate_group() -> None:
         test_fraction=0.2,
         held_out_question_ids_path=held_out_path,
     )
-    examples = read_jsonl(output_dir / 'clean_sft_all.jsonl', CleanSFTExample)
+    examples = read_jsonl(output_dir / 'clean_sft_held_out.jsonl', CleanSFTExample)
 
     assert len(examples) == 2
     assert {example.metadata.split for example in examples} == {'held_out'}

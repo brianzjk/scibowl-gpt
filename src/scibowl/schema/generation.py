@@ -25,7 +25,6 @@ class QuestionSpec(BaseModel):
     topic_focus: list[str] = Field(default_factory=list)
     must_use_sources: list[str] = Field(default_factory=list)
     forbidden_topics: list[str] = Field(default_factory=list)
-    style_target_ids: list[str] = Field(default_factory=list)
     constraints: QuestionConstraints = Field(default_factory=QuestionConstraints)
 
     @field_validator("difficulty")

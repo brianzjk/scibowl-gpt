@@ -3,9 +3,6 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from scibowl.eval.baseline import run_baseline_eval
-from scibowl.eval.benchmark import build_evaluation_record
-from scibowl.eval.splits import build_rated_question_split
 from scibowl.generate.batch import run_generation_batch
 from scibowl.generate.orchestration import GenerationOrchestrator
 from scibowl.generation_review.server import run_generated_question_review_server
@@ -18,9 +15,11 @@ from scibowl.ingest.textbooks import ingest_textbook_text
 from scibowl.llm.runtime import apply_runtime_model_overrides
 from scibowl.schema.generation import QuestionSpec
 from scibowl.schema.question import NormalizedQuestion
-from scibowl.schema.textbook import TextbookChunk
-from scibowl.training import CLEAN_SFT_PROFILES, build_clean_sft_dataset, export_sft_dataset
-from scibowl.training.lora import train_lora_from_config
+from scibowl.training import (
+    CLEAN_SFT_PROFILES,
+    build_clean_sft_dataset,
+    validate_tinker_sft_dataset,
+)
 from scibowl.utils.io import read_json, read_jsonl, write_json, write_jsonl
 
 
@@ -125,58 +124,19 @@ def cmd_import_mit_ratings_dir(args: argparse.Namespace) -> None:
     print(f"Wrote {len(rows)} MIT review ratings to {args.output_path}")
 
 
-def cmd_build_rated_split(args: argparse.Namespace) -> None:
-    split = build_rated_question_split(
-        Path(args.questions),
-        Path(args.reviews),
-        seed=args.seed,
-        train_fraction=args.train_fraction,
-        val_fraction=args.val_fraction,
-    )
-    write_json(Path(args.output_path), split)
-    print(
-        "Built rated split "
-        f"(train={split['counts']['train']}, val={split['counts']['val']}, test={split['counts']['test']})"
-    )
-
-
-def cmd_run_baseline_eval(args: argparse.Namespace) -> None:
-    _apply_model_override_args(args)
-    records = run_baseline_eval(
-        split_path=Path(args.split),
-        split_name=args.split_name,
-        output_dir=Path(args.output_dir),
-        questions_path=Path(args.questions) if args.questions else None,
-        style_questions_path=Path(args.style_questions) if args.style_questions else None,
-        reviews_path=Path(args.reviews) if args.reviews else None,
-        textbook_chunks_path=Path(args.textbook_chunks) if args.textbook_chunks else None,
-        max_items=args.max_items,
-        max_per_category=args.max_per_category,
-        excluded_categories=args.exclude_category,
-    )
-    print(f"Wrote {len(records)} baseline evaluation records to {args.output_dir}")
-
-
 def cmd_demo_generate(args: argparse.Namespace) -> None:
     _apply_model_override_args(args)
     spec = QuestionSpec.model_validate(read_json(Path(args.spec)))
-    textbook_chunks = _load_textbook_chunks_arg(Path(args.textbook_chunks))
+    textbook_chunks = load_textbook_chunks(Path(args.textbook_chunks))
     style_questions = read_jsonl(Path(args.style_questions), NormalizedQuestion)
 
     orchestrator = GenerationOrchestrator()
     bundle, draft, report = orchestrator.run(spec, textbook_chunks, style_questions)
-    eval_record = build_evaluation_record("demo_run", draft.draft_id, spec, draft, report)
-
     output_dir = Path(args.output_dir)
     write_json(output_dir / "retrieval_bundle.json", bundle.model_dump())
     write_json(output_dir / "draft.json", draft.model_dump())
     write_json(output_dir / "report.json", report.model_dump())
-    write_json(output_dir / "evaluation.json", eval_record.model_dump())
     print(f"Wrote generation artifacts to {args.output_dir}")
-
-
-def _load_textbook_chunks_arg(path: Path) -> list[TextbookChunk]:
-    return load_textbook_chunks(path)
 
 
 def cmd_review_generated_questions(args: argparse.Namespace) -> None:
@@ -197,25 +157,6 @@ def cmd_generate_from_config(args: argparse.Namespace) -> None:
     _apply_model_override_args(args)
     records = run_generation_batch(Path(args.config_path))
     print(f"Wrote {len(records)} generated question runs from {args.config_path}")
-
-
-def cmd_export_sft_dataset(args: argparse.Namespace) -> None:
-    summary = export_sft_dataset(
-        questions_path=Path(args.questions),
-        output_dir=Path(args.output_dir),
-        validation_fraction=args.validation_fraction,
-        seed=args.seed,
-        excluded_categories=tuple(args.exclude_category),
-    )
-    print(
-        "Exported SFT dataset "
-        f"(unique={summary['unique_questions']}, train={summary['split_counts']['train']}, "
-        f"val={summary['split_counts']['val']}, materialized_train={summary['materialized_train_count']})"
-    )
-
-
-def cmd_train_lora_sft(args: argparse.Namespace) -> None:
-    train_lora_from_config(Path(args.config_path))
 
 
 def cmd_build_clean_sft_dataset(args: argparse.Namespace) -> None:
@@ -241,6 +182,16 @@ def cmd_build_clean_sft_dataset(args: argparse.Namespace) -> None:
     print(
         f'Built clean SFT dataset (train={train_count}, val={val_count}, '
         f'test={test_count}, held_out={held_out_count})'
+    )
+
+
+def cmd_validate_tinker_sft(args: argparse.Namespace) -> None:
+    summary = validate_tinker_sft_dataset(Path(args.data_dir))
+    counts = summary['split_counts']
+    print(
+        'Tinker SFT data is valid '
+        f"(train={counts['train']}, val={counts['val']}, "
+        f"test={counts['test']}, held_out={counts['held_out']})"
     )
 
 
@@ -336,29 +287,6 @@ def build_parser() -> argparse.ArgumentParser:
     import_mit_ratings_dir.add_argument("--tournament", default="MIT Science Bowl 2025")
     import_mit_ratings_dir.set_defaults(func=cmd_import_mit_ratings_dir)
 
-    build_rated_split = subparsers.add_parser("build-rated-split")
-    build_rated_split.add_argument("--questions", required=True)
-    build_rated_split.add_argument("--reviews", required=True)
-    build_rated_split.add_argument("--output-path", required=True)
-    build_rated_split.add_argument("--seed", type=int, default=42)
-    build_rated_split.add_argument("--train-fraction", type=float, default=0.8)
-    build_rated_split.add_argument("--val-fraction", type=float, default=0.1)
-    build_rated_split.set_defaults(func=cmd_build_rated_split)
-
-    run_baseline_eval_cmd = subparsers.add_parser("run-baseline-eval")
-    run_baseline_eval_cmd.add_argument("--split", required=True)
-    run_baseline_eval_cmd.add_argument("--split-name", default="test")
-    run_baseline_eval_cmd.add_argument("--output-dir", required=True)
-    run_baseline_eval_cmd.add_argument("--questions")
-    run_baseline_eval_cmd.add_argument("--style-questions")
-    run_baseline_eval_cmd.add_argument("--reviews")
-    run_baseline_eval_cmd.add_argument("--textbook-chunks")
-    run_baseline_eval_cmd.add_argument("--max-items", type=int)
-    run_baseline_eval_cmd.add_argument("--max-per-category", type=int)
-    run_baseline_eval_cmd.add_argument("--exclude-category", action="append", default=["energy"])
-    _add_model_override_args(run_baseline_eval_cmd)
-    run_baseline_eval_cmd.set_defaults(func=cmd_run_baseline_eval)
-
     demo_generate = subparsers.add_parser("demo-generate")
     demo_generate.add_argument("--spec", required=True)
     demo_generate.add_argument("--textbook-chunks", required=True)
@@ -381,14 +309,6 @@ def build_parser() -> argparse.ArgumentParser:
     _add_model_override_args(generate_from_config_cmd)
     generate_from_config_cmd.set_defaults(func=cmd_generate_from_config)
 
-    export_sft_cmd = subparsers.add_parser("export-sft-dataset")
-    export_sft_cmd.add_argument("--questions", required=True)
-    export_sft_cmd.add_argument("--output-dir", required=True)
-    export_sft_cmd.add_argument("--validation-fraction", type=float, default=0.05)
-    export_sft_cmd.add_argument("--seed", type=int, default=42)
-    export_sft_cmd.add_argument("--exclude-category", action="append", default=["energy"])
-    export_sft_cmd.set_defaults(func=cmd_export_sft_dataset)
-
     clean_sft_cmd = subparsers.add_parser('build-clean-sft-dataset')
     clean_sft_cmd.add_argument('--questions', action='append', required=True)
     clean_sft_cmd.add_argument('--output-dir', required=True)
@@ -402,9 +322,9 @@ def build_parser() -> argparse.ArgumentParser:
     clean_sft_cmd.add_argument('--include-unrated-writing', action='store_true')
     clean_sft_cmd.set_defaults(func=cmd_build_clean_sft_dataset)
 
-    train_lora_cmd = subparsers.add_parser("train-lora-sft")
-    train_lora_cmd.add_argument("config_path")
-    train_lora_cmd.set_defaults(func=cmd_train_lora_sft)
+    validate_tinker_cmd = subparsers.add_parser('validate-tinker-sft')
+    validate_tinker_cmd.add_argument('data_dir')
+    validate_tinker_cmd.set_defaults(func=cmd_validate_tinker_sft)
 
     return parser
 
