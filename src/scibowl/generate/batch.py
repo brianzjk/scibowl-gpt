@@ -8,14 +8,12 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from scibowl.eval.benchmark import build_evaluation_record
 from scibowl.ingest.textbook_corpus import load_textbook_chunks
 from scibowl.generate.orchestration import GenerationOrchestrator
 from scibowl.schema.common import Category, QuestionType
 from scibowl.schema.dataset import GeneratedQuestionRunRecord
 from scibowl.schema.generation import QuestionSpec
 from scibowl.schema.question import NormalizedQuestion
-from scibowl.schema.textbook import TextbookChunk
 from scibowl.utils.ids import make_id, slugify
 from scibowl.utils.io import ensure_parent, read_jsonl
 from scibowl.utils.subcategories import DEFAULT_RANDOM_SUBCATEGORY_POOLS
@@ -92,7 +90,7 @@ def load_generation_batch_config(path: Path) -> GenerationBatchConfig:
 def run_generation_batch(config_path: Path) -> list[GeneratedQuestionRunRecord]:
     config = load_generation_batch_config(config_path)
     style_questions = read_jsonl(config.style_questions_path, NormalizedQuestion)
-    textbook_chunks = _load_textbook_chunks(config.textbook_chunks_path)
+    textbook_chunks = load_textbook_chunks(config.textbook_chunks_path)
     orchestrator = GenerationOrchestrator()
     rng = random.Random(config.random_seed)
     recent_fact_chunk_ids: deque[str] = deque(maxlen=18)
@@ -120,7 +118,6 @@ def run_generation_batch(config_path: Path) -> list[GeneratedQuestionRunRecord]:
                 topic_focus=job.topic_focus or [selected_subcategory],
                 must_use_sources=job.must_use_sources,
                 forbidden_topics=job.forbidden_topics,
-                style_target_ids=[],
             )
             bundle, draft, report = orchestrator.run(
                 spec,
@@ -129,7 +126,6 @@ def run_generation_batch(config_path: Path) -> list[GeneratedQuestionRunRecord]:
                 avoid_fact_chunk_ids=set(recent_fact_chunk_ids),
                 avoid_style_question_ids=set(recent_style_question_ids),
             )
-            evaluation = build_evaluation_record("generation_batch", draft.draft_id, spec, draft, report)
             record = GeneratedQuestionRunRecord(
                 run_id="generation_batch",
                 job_id=job_id,
@@ -137,7 +133,6 @@ def run_generation_batch(config_path: Path) -> list[GeneratedQuestionRunRecord]:
                 bundle=bundle,
                 draft=draft,
                 report=report,
-                evaluation=evaluation,
                 metadata={
                     "job_id": job_id,
                     "job_index": index + 1,
@@ -165,10 +160,6 @@ def run_generation_batch(config_path: Path) -> list[GeneratedQuestionRunRecord]:
                 f"{draft.question.answer_mode.value} / difficulty {selected_difficulty}"
             )
     return records
-
-
-def _load_textbook_chunks(path: Path) -> list[TextbookChunk]:
-    return load_textbook_chunks(path)
 
 
 def _default_job_id(job: GenerationJobConfig) -> str:

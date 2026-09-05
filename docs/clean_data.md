@@ -1,6 +1,6 @@
 # Clean training data
 
-Use `build-clean-sft-dataset` for new SFT work. The older `export-sft-dataset` command remains for repeat runs of the first baseline, but it uses guessed labels and old sample weights. Do not use that export to judge a new model.
+Use `build-clean-sft-dataset` for SFT work. It is the only training-data export in this repo.
 
 The clean export keeps these rules:
 
@@ -50,4 +50,4 @@ Use `--include-unrated-writing` only for an explicit ablation. Do not use it for
 
 For ablations, rerun with `mit_recent`, `mit_all`, `mit_recent_plus_nsb`, and `mit_all_plus_nsb`. Keep the same seed and held-out file. The output manifest records the profile, source mix, label counts, exclusions, and split counts.
 
-The output has `train`, `val`, `test`, and `held_out` JSONL files. Do not tune prompts or checkpoints on `test` or `held_out`.
+The output has separate `train`, `val`, `test`, and `held_out` JSONL files. There is no combined file because it would make accidental benchmark leakage too easy. Do not tune prompts or checkpoints on `test` or `held_out`.

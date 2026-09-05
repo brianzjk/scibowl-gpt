@@ -11,7 +11,6 @@ def _spec(
     category: Category = Category.EARTH_SPACE,
     subcategory: str = 'Hydrology',
     topic: str = 'groundwater aquifer',
-    style_target_ids: list[str] | None = None,
 ) -> QuestionSpec:
     return QuestionSpec(
         spec_id=spec_id,
@@ -21,7 +20,6 @@ def _spec(
         answer_mode=AnswerMode.SHORT_ANSWER,
         difficulty=4,
         topic_focus=[topic],
-        style_target_ids=style_target_ids or [],
     )
 
 
@@ -193,7 +191,7 @@ def test_duplicate_chunk_ids_are_removed_and_locator_uses_page_metadata() -> Non
     )
 
 
-def test_explicit_style_target_wins_and_recent_mit_is_default_preference() -> None:
+def test_recent_mit_is_default_style_preference() -> None:
     old = _style(
         'old_target',
         'nsb_set_17',
@@ -212,15 +210,8 @@ def test_explicit_style_target_wins_and_recent_mit_is_default_preference() -> No
     )
 
     default_bundle = retrieve_bundle(_spec('style_default'), [], [old, recent], style_top_k=1)
-    target_bundle = retrieve_bundle(
-        _spec('style_target', style_target_ids=['old_target']),
-        [],
-        [old, recent],
-        style_top_k=1,
-    )
 
     assert default_bundle.style_examples[0].question_id == 'recent_mit'
-    assert target_bundle.style_examples[0].question_id == 'old_target'
 
 
 def test_style_year_parser_accepts_underscored_source_ids() -> None:

@@ -35,7 +35,6 @@ The output is a JSONL of `GeneratedQuestionRunRecord` rows. Each row includes:
 - the retrieval bundle
 - the generated draft
 - the verifier report
-- the draft-level evaluation scores
 
 Those JSONL files can be reviewed in the generated-question review website with:
 
@@ -54,7 +53,7 @@ Those JSONL files can be reviewed in the generated-question review website with:
 ```yaml
 output_path: ../data/processed/generated/example_batch.jsonl
 style_questions_path: ../data/interim/question_sets/style_corpus_all.jsonl
-textbook_chunks_path: ../data/interim/textbooks
+textbook_chunks_path: ../data/interim/textbooks_v2
 random_seed: 7
 
 jobs:

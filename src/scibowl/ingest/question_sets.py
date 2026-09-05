@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import csv
-import json
 from pathlib import Path
 
 import pandas as pd
@@ -9,17 +8,7 @@ import pandas as pd
 from scibowl.schema.common import AnswerMode, Category, QuestionType, SourceType
 from scibowl.schema.question import AnswerGuidance, Choice, NormalizedQuestion, Provenance, SourceMetadata
 from scibowl.utils.ids import slugify
-from scibowl.utils.io import read_jsonl
 from scibowl.utils.text import normalize_whitespace
-
-
-def load_normalized_questions(path: Path) -> list[NormalizedQuestion]:
-    return read_jsonl(path, NormalizedQuestion)
-
-
-def load_question_specs(path: Path) -> list[dict[str, object]]:
-    with path.open("r", encoding="utf-8") as handle:
-        return [json.loads(line) for line in handle if line.strip()]
 
 
 def _normalize_category(value: str) -> Category:

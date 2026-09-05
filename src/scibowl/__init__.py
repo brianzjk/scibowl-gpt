@@ -6,5 +6,4 @@ __all__ = [
     "retrieval",
     "generate",
     "verify",
-    "eval",
 ]

@@ -155,7 +155,6 @@ def _bm25_fact_scores(
     minimum_topic_matches = 1 if len(topic_terms) <= 2 else min(3, math.ceil(len(topic_terms) / 3))
 
     term_frequencies: dict[str, Counter[str]] = {}
-    document_terms: dict[str, set[str]] = {}
     body_lengths: dict[str, int] = {}
     document_frequency: Counter[str] = Counter()
 
@@ -175,7 +174,6 @@ def _bm25_fact_scores(
             counts[token] += 2
         present = set(counts)
         term_frequencies[chunk.chunk_id] = counts
-        document_terms[chunk.chunk_id] = present
         body_lengths[chunk.chunk_id] = max(1, len(body_tokens))
         document_frequency.update(present)
 
@@ -184,10 +182,10 @@ def _bm25_fact_scores(
     scores: dict[str, float] = {}
     for chunk in chunks:
         counts = term_frequencies[chunk.chunk_id]
-        if not core_terms.intersection(document_terms[chunk.chunk_id]):
+        if not core_terms.intersection(counts):
             scores[chunk.chunk_id] = 0.0
             continue
-        if topic_terms and len(topic_terms.intersection(document_terms[chunk.chunk_id])) < minimum_topic_matches:
+        if topic_terms and len(topic_terms.intersection(counts)) < minimum_topic_matches:
             scores[chunk.chunk_id] = 0.0
             continue
         length_norm = 0.25 + 0.75 * body_lengths[chunk.chunk_id] / average_length
@@ -253,11 +251,10 @@ def retrieve_bundle(
         and question.question_type == spec.question_type
         and question.question_id not in avoided_style_ids
     ]
-    targeted_ids = set(spec.style_target_ids)
     scored_styles = [
         _ScoredItem(
             item=question,
-            score=_style_score(spec, question, targeted_ids),
+            score=_style_score(spec, question),
         )
         for question in style_candidates
     ]
@@ -297,9 +294,8 @@ def retrieve_bundle(
 def _style_score(
     spec: QuestionSpec,
     question: NormalizedQuestion,
-    targeted_ids: set[str],
 ) -> float:
-    score = 100.0 if question.question_id in targeted_ids else 0.0
+    score = 0.0
     tournament = question.source_metadata.tournament or ''
     year = question.source_metadata.year or _year_from_text(
         f'{question.source_id} {tournament}'
