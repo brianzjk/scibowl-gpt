@@ -16,9 +16,9 @@ python -m scibowl.cli.main validate-tinker-sft \
   ../data/processed/training/clean_sft_v2
 ```
 
-Do not start the main run until the held-out ID list is fixed and the manifest's
-`held_out_excluded_question_ids` has been reviewed. The current split is enough for
-an SFT trial, but it is not a final model benchmark.
+The current 140-question held-out split is enough for an SFT trial. Before a final
+benchmark, either freeze those 140 questions or replace the 49 requested questions
+that failed curation with eligible questions. Do not restore filtered questions.
 
 Install the optional training tools only in the Linux training environment:
 

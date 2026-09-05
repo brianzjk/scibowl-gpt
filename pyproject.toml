@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "scibowl-gpt"
 version = "0.1.0"
-description = "Science Bowl question generation pipeline with retrieval, verification, and evaluation."
+description = "Science Bowl data curation, grounded question generation, and human review."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

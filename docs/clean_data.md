@@ -44,7 +44,12 @@ python -m scibowl.cli.main build-clean-sft-dataset `
 
 If there is no held-out ID file yet, leave out that option. Add the fixed evaluation IDs before any final training run.
 
-The manifest reports how many requested holdout IDs were present and how many survived curation. Review `held_out_excluded_question_ids` before freezing an evaluation set; do not infer benchmark coverage from the held-out split count alone.
+The manifest reports how many requested holdout IDs were present and how many
+survived curation. In the current export, all 189 requested MIT 2025 IDs were found,
+but only 140 passed the same quality and format rules as the rest of the corpus. The
+other 49 cannot enter training, so this does not create leakage. Do not force them
+back into the benchmark. Either use the 140 clean questions or replace the rejected
+IDs with eligible questions before freezing a larger benchmark.
 
 Use `--include-unrated-writing` only for an explicit ablation. Do not use it for the main SFT run.
 
